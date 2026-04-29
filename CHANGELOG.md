@@ -4,6 +4,23 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 ---
 
+## v1.6.0 — 2026-04-29
+
+### Refactoring
+
+- **Decomposed `SaleChecker` God class** (701 lines) into four focused modules:
+  - `services/filters.py` — product filtering pipeline with individually named, documented filter functions (`_is_excluded`, `_matches_gender`, `_matches_size`, `_meets_discount_threshold`). Adding a new filter is now a single function + one `and` clause.
+  - `services/stock.py` — real-time stock verification (`StockVerifier`), including the `pick_in_stock_variant` and `rebuild_from_l2` helpers.
+  - `services/state.py` — seen-variant persistence (`SeenVariantStore`) for new-deal detection.
+  - `services/enrichment.py` — watched/ignored metadata enrichment (moved from `main.py`).
+- **`SaleChecker`** is now a thin ~160-line orchestrator that delegates to the modules above.
+- **Replaced opaque 7-element tuple** in stock verification with a `StockVariant` dataclass (named fields: `color_display_code`, `size_display_code`, `color_name`, `quantity`, `status`, `color_code`, `size_code`).
+- **Added `SaleItem.variant_at(i)`** accessor for safe, named access to per-variant data — eliminates the repeated `qtys[i] if i < len(qtys) else 0` pattern across all notification channels.
+- **Added `parse_variant_codes(url)`** helper in `models/products.py` — consolidates URL parameter parsing (colour/size display code extraction) that was duplicated in `config.py`, `notifications/base.py`, and `sale_checker.py`.
+- **Added `VariantInfo` dataclass** for structured variant data returned by `SaleItem.variant_at()`.
+
+---
+
 ## v1.5.0 — 2026-04-24
 
 ### New features

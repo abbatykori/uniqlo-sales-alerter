@@ -37,21 +37,16 @@ def _expand_to_variants(deal: SaleItem) -> list[SaleItem]:
             if img != deal.image_url:
                 return [deal.model_copy(update={"image_url": img})]
         return [deal]
-    color_names = deal.color_names or []
-    qtys = deal.stock_quantities
-    statuses = deal.stock_statuses
     variants: list[SaleItem] = []
     for i, (sz, url) in enumerate(zip(deal.available_sizes, deal.product_urls)):
-        cn = color_names[i] if i < len(color_names) else ""
-        qty = qtys[i] if i < len(qtys) else 0
-        status = statuses[i] if i < len(statuses) else ""
+        v = deal.variant_at(i)
         img = resolve_color_image(url, deal.color_images, deal.image_url)
         variants.append(deal.model_copy(update={
             "available_sizes": [sz],
             "product_urls": [url],
-            "color_names": [cn],
-            "stock_quantities": [qty],
-            "stock_statuses": [status],
+            "color_names": [v.color_name],
+            "stock_quantities": [v.quantity],
+            "stock_statuses": [v.status],
             "image_url": img,
         }))
     return variants
@@ -109,13 +104,11 @@ def _build_html(
             f'<small>Color: <strong>{html_mod.escape(color_name)}</strong></small><br/>'
             if color_name else ""
         )
-        qtys = variant.stock_quantities
-        statuses = variant.stock_statuses
         size_links = " &middot; ".join(
             _size_link_html(
                 sz, url,
-                qtys[i] if i < len(qtys) else 0,
-                statuses[i] if i < len(statuses) else "",
+                variant.variant_at(i).quantity,
+                variant.variant_at(i).status,
                 low_stock_threshold,
             )
             for i, (sz, url) in enumerate(

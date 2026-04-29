@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
-from urllib.parse import parse_qs, quote, urlparse
+from urllib.parse import quote
 
-from uniqlo_sales_alerter.models.products import SaleItem, is_low_stock
+from uniqlo_sales_alerter.models.products import SaleItem, is_low_stock, parse_variant_codes
 
 PROJECT_URL = "https://github.com/kequach/uniqlo-sales-alerter"
 
@@ -153,13 +153,7 @@ def resolve_color_image(
     3. Return *fallback* (typically the listing's first/representative image).
     """
     if color_images and url:
-        import re
-
-        params = parse_qs(urlparse(url).query)
-        color_code = params.get("colorDisplayCode", [""])[0]
-        if not color_code:
-            raw = params.get("colorCode", [""])[0]
-            color_code = re.sub(r"^[A-Z]+", "", raw)
+        color_code, _ = parse_variant_codes(url)
         if color_code:
             if color_code in color_images:
                 return color_images[color_code]

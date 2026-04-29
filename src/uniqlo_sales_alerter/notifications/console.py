@@ -54,12 +54,9 @@ def _format_deal(
     if colors:
         lines.append(f"     Color: {_ansi('35', ' · '.join(colors))}")
 
-    qtys = deal.stock_quantities
-    statuses = deal.stock_statuses
     for i, (size, url) in enumerate(zip(deal.available_sizes, deal.product_urls)):
-        qty = qtys[i] if i < len(qtys) else 0
-        status = statuses[i] if i < len(statuses) else ""
-        stock_text, is_low = format_stock_suffix(qty, status, low_stock_threshold)
+        v = deal.variant_at(i)
+        stock_text, is_low = format_stock_suffix(v.quantity, v.status, low_stock_threshold)
         if stock_text:
             stock_colored = (
                 _ansi("31;1", f"  ({stock_text})") if is_low

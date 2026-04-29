@@ -72,13 +72,11 @@ def _build_caption(
     rating_text = format_rating(deal)
     rating_line = _escape_md(rating_text) if rating_text else ""
 
-    qtys = deal.stock_quantities
-    statuses = deal.stock_statuses
     size_links = " \\| ".join(
         _size_link(
             sz, url,
-            qtys[i] if i < len(qtys) else 0,
-            statuses[i] if i < len(statuses) else "",
+            deal.variant_at(i).quantity,
+            deal.variant_at(i).status,
             low_stock_threshold,
         )
         for i, (sz, url) in enumerate(zip(deal.available_sizes, deal.product_urls))

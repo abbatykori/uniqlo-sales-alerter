@@ -255,13 +255,9 @@ def _render_card(
         if best_image and first_url else img_inner
     )
 
-    qtys = deal.stock_quantities
-    statuses = deal.stock_statuses
-
     def _size_chip(sz: str, url: str, i: int) -> str:
-        qty = qtys[i] if i < len(qtys) else 0
-        status = statuses[i] if i < len(statuses) else ""
-        stock_span, is_low = _stock_inline_html(qty, status, low_stock_threshold)
+        v = deal.variant_at(i)
+        stock_span, is_low = _stock_inline_html(v.quantity, v.status, low_stock_threshold)
         cls = "size-chip low-stock" if is_low else "size-chip"
         return f'<a class="{cls}" href="{url}" target="_blank">{sz}{stock_span}</a>'
 
