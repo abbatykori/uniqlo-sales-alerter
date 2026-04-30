@@ -143,9 +143,10 @@ def _build_html(
         actions = DealActions(variant, server_url)
         action_html = ""
         if actions.ignore_url:
-            if actions.unwatch_url:
+            if actions.unwatch_urls:
+                _, first_unwatch = actions.unwatch_urls[0]
                 extra_link = (
-                    f' &middot; <a href="{actions.unwatch_url}" '
+                    f' &middot; <a href="{first_unwatch}" '
                     f'style="color:#c0392b;">Unwatch</a>'
                 )
             elif actions.watch_urls:

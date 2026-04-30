@@ -10,6 +10,7 @@ import pytest
 from uniqlo_sales_alerter.config import AppConfig, EmailChannelConfig, TelegramChannelConfig
 from uniqlo_sales_alerter.models.products import is_low_stock
 from uniqlo_sales_alerter.notifications.base import (
+    DealActions,
     Notifier,
     _derive_color_image,
     format_rating,
@@ -326,7 +327,7 @@ class TestTelegramNotifierSend:
         markup = bot.send_photo.call_args.kwargs["reply_markup"]
         buttons = [btn for row in markup.inline_keyboard for btn in row]
         labels = [btn.text for btn in buttons]
-        assert "Unwatch" in labels
+        assert any(label.startswith("Unwatch ") for label in labels)
         assert not any(label.startswith("Watch ") for label in labels)
 
     @pytest.mark.asyncio
@@ -958,3 +959,47 @@ class TestIgnoredKeywordsFooter:
             assert "Ignored keywords" not in out, (
                 f"{name} should not show keyword label when list is empty"
             )
+
+
+class TestDealActionsUnwatch:
+    """DealActions should generate per-variant unwatch URLs with color+size."""
+
+    _SERVER = "http://localhost:8000"
+
+    def test_watched_deal_generates_per_size_unwatch_urls(self):
+        deal = _sample_deal(is_watched=True)
+        actions = DealActions(deal, self._SERVER)
+        assert len(actions.unwatch_urls) == len(deal.available_sizes)
+        assert actions.watch_urls  # watch URLs are still generated
+
+        for size_label, url in actions.unwatch_urls:
+            assert size_label in deal.available_sizes
+            assert "color=" in url
+            assert "size=" in url
+            assert f"/unwatch/{deal.product_id}" in url
+
+    def test_non_watched_deal_has_no_unwatch_urls(self):
+        deal = _sample_deal(is_watched=False)
+        actions = DealActions(deal, self._SERVER)
+        assert actions.unwatch_urls == []
+        assert len(actions.watch_urls) == len(deal.available_sizes)
+
+    def test_unwatch_urls_encode_correct_color_and_size(self):
+        deal = _sample_deal(
+            is_watched=True,
+            available_sizes=["M"],
+            product_urls=[
+                "https://www.uniqlo.com/de/de/products/E001/00"
+                "?colorDisplayCode=09&sizeDisplayCode=004",
+            ],
+        )
+        actions = DealActions(deal, self._SERVER)
+        assert len(actions.unwatch_urls) == 1
+        _, url = actions.unwatch_urls[0]
+        assert "color=09" in url
+        assert "size=004" in url
+
+    def test_no_unwatch_urls_without_server_url(self):
+        deal = _sample_deal(is_watched=True)
+        actions = DealActions(deal, "")
+        assert actions.unwatch_urls == []

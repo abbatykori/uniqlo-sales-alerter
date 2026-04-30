@@ -264,13 +264,20 @@ def _render_card(
         return f'<a class="{css_class}" href="{url}" target="_blank">{size_label}{stock_span}</a>'
 
     actions = DealActions(deal, server_url)
-    if actions.unwatch_url:
-        size_parts = [
-            _size_chip(size_label, url, i)
-            for i, (size_label, url) in enumerate(
-                zip(deal.available_sizes, deal.product_urls),
-            )
-        ]
+    if actions.unwatch_urls:
+        unwatch_map = dict(actions.unwatch_urls)
+        size_parts = []
+        for i, (size_label, url) in enumerate(
+            zip(deal.available_sizes, deal.product_urls),
+        ):
+            chip = _size_chip(size_label, url, i)
+            unwatch_url = unwatch_map.get(size_label)
+            if unwatch_url:
+                chip += (
+                    f'<a class="watch-chip" href="{unwatch_url}" '
+                    f'target="_blank" title="Unwatch {size_label}">&#9733;</a>'
+                )
+            size_parts.append(chip)
     else:
         watch_map = dict(actions.watch_urls)
         size_parts = []
@@ -305,18 +312,12 @@ def _render_card(
 
     action_row = ""
     if actions.ignore_url:
-        unwatch_btn = (
-            f'<a class="action-btn action-unwatch" '
-            f'href="{actions.unwatch_url}" '
-            f'target="_blank">Unwatch</a>'
-        ) if actions.unwatch_url else ""
         action_row = (
             '<div class="actions-row">'
             f'<a class="action-btn action-ignore" '
             f'href="{actions.ignore_url}" '
             f'target="_blank">Ignore</a>'
-            + unwatch_btn
-            + '</div>'
+            '</div>'
         )
 
     colors = unique_colors(deal)

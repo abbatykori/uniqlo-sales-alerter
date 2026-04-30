@@ -267,15 +267,33 @@ async def action_unwatch(
     product_id: str,
     app_state=Depends(_get_app_state),
     name: str = Query(""),
+    color: str = Query(""),
+    size: str = Query(""),
 ) -> HTMLResponse:
-    """Remove a product from the watch list (browser-friendly)."""
+    """Remove a variant from the watch list (browser-friendly).
+
+    When *color* and *size* are provided, only the matching variant is
+    removed.  Without them, all watched variants for the product are
+    removed (backward-compatible fallback).
+    """
     current = app_state.config
     pid_upper = product_id.upper()
     before = len(current.filters.watched_variants)
-    kept = [
-        wv for wv in current.filters.watched_variants
-        if wv.id.upper() != pid_upper
-    ]
+
+    if color or size:
+        kept = [
+            wv for wv in current.filters.watched_variants
+            if not (
+                wv.id.upper() == pid_upper
+                and wv.color == color
+                and wv.size == size
+            )
+        ]
+    else:
+        kept = [
+            wv for wv in current.filters.watched_variants
+            if wv.id.upper() != pid_upper
+        ]
 
     if len(kept) == before:
         return _action_page(

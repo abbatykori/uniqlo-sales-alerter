@@ -4,7 +4,11 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 ---
 
-## v1.6.0 — 2026-04-29
+## v1.6.0 — 2026-04-30
+
+### Fixed
+
+- **Unwatch now respects color and size** — previously, clicking "Unwatch" removed *all* watched variants for a product regardless of colour/size. The unwatch endpoint now accepts `color` and `size` query parameters for targeted removal, and all notification channels generate per-variant unwatch URLs with the correct colour+size codes.
 
 ### Refactoring
 

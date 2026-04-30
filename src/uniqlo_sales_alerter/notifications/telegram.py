@@ -150,10 +150,13 @@ class TelegramNotifier:
             actions = DealActions(deal, self._server_url)
             markup = None
             if actions.ignore_url:
-                if actions.unwatch_url:
-                    rows = [[InlineKeyboardButton(
-                        "Unwatch", url=actions.unwatch_url,
-                    )]]
+                if actions.unwatch_urls:
+                    rows = [
+                        [InlineKeyboardButton(
+                            f"Unwatch {size_label}", url=url,
+                        )]
+                        for size_label, url in actions.unwatch_urls
+                    ]
                 else:
                     rows = [
                         [InlineKeyboardButton(
