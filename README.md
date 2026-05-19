@@ -1,10 +1,26 @@
-# Uniqlo Sales Alerter
+# Uniqlo Sales Alerter (Abbaty Fork)
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-hub-2496ED.svg)](https://hub.docker.com/r/kequach/uniqlo-sales-alerter)
 
 A self-hosted server that monitors [Uniqlo](https://www.uniqlo.com) sales and sends you notifications when items match your criteria. It talks directly to Uniqlo's internal Commerce API.
+
+Forked from [kequach/uniqlo-sales-alerter](https://github.com/kequach/uniqlo-sales-alerter). See [NOTICE](NOTICE) for attribution.
+
+## What's different from upstream
+
+This fork is mid-build. The headline differences planned for v1 (all "in progress" until called out):
+
+- **Named saved filters** replace the single global filter (in progress)
+- **Apprise** replaces the four hand-rolled notification channels (in progress)
+- **Snooze per filter**, **deal heatmap**, and **invoice-paste size extraction** added (in progress)
+- **i18n architecture** with separated store country and UI language (in progress)
+- **SQLite + Alembic** replaces the JSON state file (in progress)
+- **Mobile-first UI** with empty-state-first onboarding (in progress)
+- **Multi-arch Docker images** published to ghcr.io (in progress)
+
+See `docs/specs/` for the full design.
 
 ![Mail report](docs/img/mail.png)
 
@@ -282,6 +298,11 @@ Every config option can be set via env vars for initial setup. On first startup 
 | `FILTER_IGNORED_KEYWORDS` | comma-separated | `filters.ignored_keywords` |
 | `SERVER_URL` | string | `server_url` |
 | `PORT` | int | `port` |
+| `STORE_COUNTRY` | string | `store_country` (fork; falls back to `uniqlo.country`) |
+| `UI_LANGUAGE` | string | `ui_language` (fork; defaults to `en`) |
+| `DEEP_DISCOUNT_THRESHOLD` | int | `deep_discount_threshold` (fork; for heatmap) |
+| `ALERTER_DB_PATH` | string | path to the SQLite file (default `/app/data/alerter.db`) |
+| `ALERTER_SECRET` | string | HMAC secret for signed action URLs (auto-generated if unset) |
 | `NOTIFY_ON` | string | `notifications.notify_on` |
 | `CHECK_ON_STARTUP` | true/false | `notifications.check_on_startup` |
 | `PREVIEW_CLI` | true/false | `notifications.preview_cli` |

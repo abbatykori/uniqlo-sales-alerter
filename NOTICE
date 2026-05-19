@@ -1,0 +1,16 @@
+Uniqlo Sales Alerter (Abbaty Fork)
+
+Forked from kequach/uniqlo-sales-alerter (original by Keven Quach, MIT licence).
+Additional fork-specific contributions Copyright (c) 2026 Abbaty.
+
+This fork is not affiliated with, endorsed by, or sponsored by the original
+maintainer or by Uniqlo Co., Ltd.
+
+Changes from upstream:
+- Replaced single global filter with named saved filters
+- Replaced hand-rolled notifiers with Apprise
+- Added snooze per filter, deal heatmap, invoice-paste size extraction
+- Added i18n architecture with separated store country and UI language
+- Replaced JSON state files with SQLite + Alembic migrations
+- Increased test coverage; added regression test for trouser-waist bug
+- Reworked UI for mobile-first usage with empty-state-first onboarding

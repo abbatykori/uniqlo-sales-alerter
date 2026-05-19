@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{% if filter and filter.id %}Edit filter #{{ filter.id }}{% else %}New filter{% endif %}</h1>
+
+{% if errors %}
+<p class="errors">{{ errors }}</p>
+{% endif %}
+
+<form method="post" action="{% if filter and filter.id %}/ui/filters/{{ filter.id }}{% else %}/ui/filters{% endif %}"
+      {% if filter and filter.id %}hx-put="/ui/filters/{{ filter.id }}"{% else %}hx-post="/ui/filters"{% endif %}>
+    <div class="row">
+        <label for="name">Name</label>
+        <input id="name" name="name" type="text" required
+               value="{{ filter.name if filter else '' }}">
+    </div>
+
+    <div class="row">
+        <label for="gender">Gender (comma-separated)</label>
+        <input id="gender" name="gender" type="text"
+               value="{{ filter.gender | join(', ') if filter else '' }}"
+               placeholder="men, women, unisex, kids, baby">
+    </div>
+
+    <div class="row">
+        <label for="min_discount">Minimum discount (%)</label>
+        <input id="min_discount" name="min_discount" type="number" step="0.1" min="0" max="100"
+               value="{{ filter.min_discount if filter else 0 }}">
+    </div>
+
+    <div class="row">
+        <label for="sizes_clothing">Clothing sizes (comma-separated)</label>
+        <input id="sizes_clothing" name="sizes_clothing" type="text"
+               value="{{ filter.sizes_clothing | join(', ') if filter else '' }}"
+               placeholder="S, M, L, XL">
+    </div>
+
+    <div class="row">
+        <label for="sizes_pants">Pants sizes (comma-separated)</label>
+        <input id="sizes_pants" name="sizes_pants" type="text"
+               value="{{ filter.sizes_pants | join(', ') if filter else '' }}"
+               placeholder="32inch, 34inch">
+    </div>
+
+    <div class="row">
+        <label for="sizes_shoes">Shoe sizes (comma-separated)</label>
+        <input id="sizes_shoes" name="sizes_shoes" type="text"
+               value="{{ filter.sizes_shoes | join(', ') if filter else '' }}">
+    </div>
+
+    <div class="row">
+        <label>
+            <input name="one_size_match" type="checkbox" value="true"
+                   {% if filter and filter.one_size_match %}checked{% endif %}>
+            Match one-size items (accessories, bags)
+        </label>
+    </div>
+
+    <div class="row">
+        <label for="availability_mode">Availability</label>
+        <select id="availability_mode" name="availability_mode">
+            {% for option in ["both", "online", "in_store"] %}
+                <option value="{{ option }}"
+                        {% if filter and filter.availability_mode == option %}selected{% endif %}>
+                    {{ option }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="row">
+        <label for="ignored_keywords">Ignored keywords (comma-separated)</label>
+        <input id="ignored_keywords" name="ignored_keywords" type="text"
+               value="{{ filter.ignored_keywords | join(', ') if filter else '' }}">
+    </div>
+
+    <div class="row">
+        <label>
+            <input name="enabled" type="checkbox" value="true"
+                   {% if not filter or filter.enabled %}checked{% endif %}>
+            Enabled
+        </label>
+    </div>
+
+    <button type="submit">Save</button>
+    <a href="/ui/filters">Cancel</a>
+</form>
+{% endblock %}

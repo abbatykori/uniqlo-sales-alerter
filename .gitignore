@@ -211,3 +211,37 @@ reports/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ─────────────────────────────────────────────────────────────
+# Fork-specific (Abbaty)
+# ─────────────────────────────────────────────────────────────
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Local fixtures: real invoices, receipts, and a config copy that may
+# contain SMTP credentials. Used as parser fixtures for the invoice-paste
+# feature; must never enter the repo.
+assets/
+
+# Runtime data: SQLite database, .secret for HMAC, and migrated/ upstream
+# files. Mounted from a Docker volume in production; transient in dev.
+/data/
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.secret
+
+# Claude Code / agent-local settings
+.claude/
+
+# Local plan-mode files (Claude Code writes them outside the repo, but
+# guard against accidental drops into the working tree)
+**/.claude-plans/
+
+# Local-only environment overlay
+.env.local
+.env.*.local

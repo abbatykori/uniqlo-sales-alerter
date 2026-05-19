@@ -6,20 +6,25 @@ import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime, time, timedelta
+from importlib.metadata import PackageNotFoundError, version
 from typing import AsyncIterator
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 
+from uniqlo_sales_alerter.api.health import router as health_router
 from uniqlo_sales_alerter.api.routes import _redact_secrets, actions_router, router
+from uniqlo_sales_alerter.api.saved_filters import router as saved_filters_router
 from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
 from uniqlo_sales_alerter.config import AppConfig, load_config, save_config
+from uniqlo_sales_alerter.db.schema import ensure_schema
 from uniqlo_sales_alerter.models.products import SaleCheckResult
 from uniqlo_sales_alerter.notifications.dispatcher import NotificationDispatcher
 from uniqlo_sales_alerter.services.enrichment import enrich_config
 from uniqlo_sales_alerter.services.sale_checker import SaleChecker
 from uniqlo_sales_alerter.settings_ui import build_settings_page
+from uniqlo_sales_alerter.ui.routes import router as ui_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -160,6 +165,8 @@ async def reload_config(app: FastAPI) -> AppConfig:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    await ensure_schema()
+
     config = load_config()
     save_config(config)
 
@@ -193,20 +200,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("Scheduler stopped")
 
 
+try:
+    _APP_VERSION = version("uniqlo-sales-alerter")
+except PackageNotFoundError:  # running from a checkout without an installed dist
+    _APP_VERSION = "0.0.0+unknown"
+
+
 app = FastAPI(
     title="Uniqlo Sales Alerter",
     description="Monitors Uniqlo sales and surfaces deals matching your criteria.",
-    version="0.1.0",
+    version=_APP_VERSION,
     lifespan=lifespan,
 )
 
+app.include_router(health_router)
 app.include_router(router)
 app.include_router(actions_router)
-
-
-@app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+app.include_router(saved_filters_router)
+app.include_router(ui_router)
 
 
 @app.get("/settings", response_class=HTMLResponse)

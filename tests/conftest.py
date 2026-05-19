@@ -2,13 +2,35 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+import os
+import pathlib
+import tempfile
 
-import pytest
+# Pin the test database path before any uniqlo_sales_alerter import. The
+# db.engine module captures DATABASE_URL at import time, so this env var
+# must be set first.
+_TEST_DB_PATH = pathlib.Path(tempfile.gettempdir()) / "uniqlo-alerter-pytest.db"
+os.environ.setdefault("ALERTER_DB_PATH", str(_TEST_DB_PATH))
 
-from uniqlo_sales_alerter.config import AppConfig
-from uniqlo_sales_alerter.models.products import SaleItem
-from uniqlo_sales_alerter.services.sale_checker import SaleChecker
+from unittest.mock import AsyncMock, patch  # noqa: E402
+
+import pytest  # noqa: E402
+
+from uniqlo_sales_alerter.config import AppConfig  # noqa: E402
+from uniqlo_sales_alerter.db.schema import upgrade_to_head  # noqa: E402
+from uniqlo_sales_alerter.models.products import SaleItem  # noqa: E402
+from uniqlo_sales_alerter.services.sale_checker import SaleChecker  # noqa: E402
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _migrated_test_db() -> object:
+    """Apply Alembic migrations once per test session against a fresh SQLite file."""
+    if _TEST_DB_PATH.exists():
+        _TEST_DB_PATH.unlink()
+    upgrade_to_head()
+    yield
+    if _TEST_DB_PATH.exists():
+        _TEST_DB_PATH.unlink()
 
 _SAMPLE_BASE_URL = "https://www.uniqlo.com/de/de/products/E123456-000/00?colorDisplayCode=00"
 

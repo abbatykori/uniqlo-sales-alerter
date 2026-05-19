@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -41,6 +41,7 @@ def client():
         config=config,
         sale_checker=checker,
         dispatcher=dispatcher,
+        scheduler=MagicMock(running=True),
     )
 
     app.router.lifespan_context = None  # type: ignore[assignment]
@@ -48,10 +49,15 @@ def client():
 
 
 class TestHealthEndpoint:
-    def test_health(self, client: TestClient):
+    def test_health_ok(self, client: TestClient):
         resp = client.get("/health")
         assert resp.status_code == 200
-        assert resp.json() == {"status": "ok"}
+        body = resp.json()
+        assert body["status"] == "ok"
+        assert body["scheduler_running"] is True
+        assert body["db_writeable"] is True
+        assert body["last_check_age_seconds"] is None  # populated in step 9
+        assert body["message"] == "Healthy"
 
 
 class TestSalesEndpoint:

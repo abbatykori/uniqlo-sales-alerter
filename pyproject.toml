@@ -4,7 +4,7 @@ version = "1.6.0"
 description = "Monitors Uniqlo sales and sends notifications when items match your criteria"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
@@ -15,12 +15,21 @@ dependencies = [
     "apscheduler>=3.10,<4",
     "python-telegram-bot>=21",
     "aiosmtplib>=3",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.20",
+    "alembic>=1.13",
+    "jinja2>=3.1",
+    "babel>=2.16",
+    "structlog>=24.1",
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.25",
+    "pytest-cov>=5",
+    "mypy>=1.11",
     "respx>=0.22",
     "ruff>=0.9",
 ]
@@ -32,6 +41,17 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"uniqlo_sales_alerter.db.migrations" = ["script.py.mako"]
+"uniqlo_sales_alerter.i18n" = [
+    "locale/*/LC_MESSAGES/messages.po",
+    "locale/*/LC_MESSAGES/messages.mo",
+]
+"uniqlo_sales_alerter.ui" = [
+    "templates/*.html",
+    "templates/**/*.html",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
@@ -42,7 +62,7 @@ markers = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

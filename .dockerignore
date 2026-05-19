@@ -4,6 +4,7 @@
 venv/
 __pycache__/
 *.pyc
+*.mo
 *.egg-info/
 tests/
 reports/
@@ -22,3 +23,6 @@ docker-compose.yml
 .cursor/
 LICENSE
 README.md
+CHANGELOG.md
+NOTICE
+.DS_Store

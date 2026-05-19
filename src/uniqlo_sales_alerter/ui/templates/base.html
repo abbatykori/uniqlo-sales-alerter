@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Saved filters — Uniqlo Sales Alerter{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.3" integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq" crossorigin="anonymous"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 64rem; margin: 2rem auto; padding: 0 1rem; }
+        h1, h2, h3 { font-weight: 500; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; }
+        .actions { display: flex; gap: 0.5rem; }
+        form .row { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem; }
+        input, select, button { font-size: 1rem; padding: 0.4rem 0.6rem; }
+        .errors { color: #a14040; padding: 0.5rem 0; }
+        .muted { color: #6b7280; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+    <header>
+        <p class="muted">Internal saved-filter editor (fork foundation). Not linked from /settings.</p>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

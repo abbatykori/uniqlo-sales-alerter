@@ -4,6 +4,34 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 ---
 
+## Fork foundation — unreleased (Abbaty)
+
+Initial foundation work for the [Abbaty fork](docs/specs/). Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and HTMX UI without changing existing behaviour. Steps 1-6 of the foundation phase per `docs/specs/00-handoff.md`. No version bump until the multi-arch ghcr.io release (step 17). The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
+
+### Added
+
+- **Python 3.12 baseline** — `requires-python = ">=3.12"`; ruff target bumped; Dockerfile builder and runtime stages on `python:3.12-slim`.
+- **New dependencies** for the foundation phase: `sqlalchemy[asyncio]`, `aiosqlite`, `alembic`, `jinja2`, `babel`, `structlog`, `python-multipart`. Dev: `pytest-cov`, `mypy`.
+- **Non-root container user** — Dockerfile creates an `alerter` UID 1000 user; `/app/data` owned by it.
+- **Compose healthcheck** — `docker-compose.yml` declares a HEALTHCHECK pointing at `/health`.
+- **`ALERTER_SECRET` env var passthrough** — compose forwards it to the container for HMAC action-URL signing (used later in step 11).
+- **NOTICE** file with upstream attribution and a list of fork-specific changes.
+- **`.github/workflows/ci.yml`** — lint (ruff) and test (pytest -m "not e2e") on Python 3.12 for all pushes and PRs.
+- **Fork copyright** appended to LICENSE.
+- **Richer `/health` endpoint** — extracted into `api/health.py`; reports `db_writeable`, `scheduler_running`, `last_check_age_seconds`, and a `message` field. Returns 503 when any non-null check is false.
+- **SQLite schema** — ten tables from tech-spec §3 (`saved_filters`, `watched_variants`, `ignored_products`, `ignored_keywords`, `seen_variants`, `check_history`, `deal_observations`, `notification_log`, `migrations_applied`, `_health_probe`) plus five named indexes, the `availability_mode` CHECK constraint, and `COLLATE NOCASE` on `ignored_keywords.keyword`. Alembic-managed; applied automatically at startup.
+- **Async SQLAlchemy + aiosqlite engine** — `db/engine.py` exposes a module-level `AsyncEngine`, `async_sessionmaker`, FastAPI `get_session` dependency, and `health_probe()` for the writeable check on `/health`.
+- **`store_country`, `ui_language`, `deep_discount_threshold`** config keys — top-level fork fields coexisting with upstream's `uniqlo.country`. `store_country` defaults to `uniqlo.country` via a model validator so old YAML files still work. Three new env vars: `STORE_COUNTRY`, `UI_LANGUAGE`, `DEEP_DISCOUNT_THRESHOLD`. New env vars also documented: `ALERTER_DB_PATH`, `ALERTER_SECRET`.
+- **Babel i18n pipeline** — `babel.cfg`, `i18n/__init__.py` (translator factory + module-level `_`), English `messages.po` shipping `"Healthy"`/`"Degraded"` for the new healthcheck. Compiled `.mo` produced in the Docker build stage; identity fallback for unknown locales. Workflow documented in `docs/i18n.md`.
+- **Saved-filter REST API** at `/api/v1/filters` — full CRUD plus `POST /{id}/duplicate`. Pydantic schemas validate gender (must be subset of `men/women/unisex/kids/baby`), discount range (0-100), and `availability_mode` (one of `online/in_store/both`). 409 on duplicate names.
+- **Hidden HTMX UI** at `/ui/filters` — list, new, edit, delete via HTMX swaps. Not linked from `/settings` or any nav. The legacy single-filter editor on `/settings` remains the authoritative editor until step 8 swaps the matcher onto `saved_filters`.
+
+### Removed
+
+- **`.github/workflows/docker-publish.yml`** — upstream's Docker Hub publish workflow targeting `kequach/uniqlo-sales-alerter`. Replaced by ghcr.io publishing in step 17.
+
+---
+
 ## v1.6.0 — 2026-04-30
 
 ### Fixed

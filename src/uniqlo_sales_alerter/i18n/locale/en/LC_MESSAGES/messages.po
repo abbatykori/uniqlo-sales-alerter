@@ -1,0 +1,23 @@
+# English (en) catalogue for the Uniqlo Sales Alerter fork.
+# Generated initially by hand; regenerate with:
+#   pybabel extract -F babel.cfg -o src/uniqlo_sales_alerter/i18n/messages.pot src/
+#   pybabel update  -i src/uniqlo_sales_alerter/i18n/messages.pot \
+#                   -d src/uniqlo_sales_alerter/i18n/locale -l en
+msgid ""
+msgstr ""
+"Project-Id-Version: uniqlo-sales-alerter 1.6.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-20 00:00+0000\n"
+"PO-Revision-Date: 2026-05-20 00:00+0000\n"
+"Last-Translator: Abbaty\n"
+"Language: en\n"
+"Language-Team: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+msgid "Healthy"
+msgstr "Healthy"
+
+msgid "Degraded"
+msgstr "Degraded"

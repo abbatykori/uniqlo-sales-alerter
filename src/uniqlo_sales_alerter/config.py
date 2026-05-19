@@ -70,6 +70,10 @@ _ENV_MAP: list[tuple[str, list[str], str]] = [
     # -- server --
     ("SERVER_URL",                  ["server_url"],                              "str"),
     ("PORT",                        ["port"],                                    "int"),
+    # -- fork foundation: decoupled country/language + heatmap threshold --
+    ("STORE_COUNTRY",               ["store_country"],                           "str"),
+    ("UI_LANGUAGE",                 ["ui_language"],                             "str"),
+    ("DEEP_DISCOUNT_THRESHOLD",     ["deep_discount_threshold"],                 "int"),
     # -- notifications --
     ("NOTIFY_ON",                   ["notifications", "notify_on"],              "str"),
     ("CHECK_ON_STARTUP",            ["notifications", "check_on_startup"],       "bool"),
@@ -453,9 +457,23 @@ class AppConfig(BaseModel):
     server_url: str = ""
     port: int = 8000
 
+    # Fork-specific fields (foundation step 4): decoupled store country and UI
+    # language plus the heatmap threshold from tech-spec §3. ``store_country``
+    # defaults to ``uniqlo.country`` via the validator below to keep upstream
+    # configs working unchanged.
+    store_country: str | None = None
+    ui_language: str = "en"
+    deep_discount_threshold: int = 50
+
     @model_validator(mode="after")
     def _normalise_gender(self) -> "AppConfig":
         self.filters.gender = [gender.upper() for gender in self.filters.gender]
+        return self
+
+    @model_validator(mode="after")
+    def _populate_store_country_from_uniqlo(self) -> "AppConfig":
+        if self.store_country is None:
+            self.store_country = self.uniqlo.country
         return self
 
     @property

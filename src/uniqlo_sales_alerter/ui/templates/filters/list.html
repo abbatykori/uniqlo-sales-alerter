@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Saved filters</h1>
+<p>
+    <a href="/ui/filters/new">Add filter</a>
+</p>
+
+{% if filters %}
+<table id="filters-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Gender</th>
+            <th>Min discount</th>
+            <th>Availability</th>
+            <th>Enabled</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="filters-body">
+        {% for f in filters %}
+            {% include "filters/_row.html" %}
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="muted">No saved filters yet. <a href="/ui/filters/new">Add your first one.</a></p>
+{% endif %}
+{% endblock %}

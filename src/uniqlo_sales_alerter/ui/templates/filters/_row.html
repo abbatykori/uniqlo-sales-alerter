@@ -1,0 +1,18 @@
+<tr id="filter-row-{{ f.id }}">
+    <td>{{ f.id }}</td>
+    <td>{{ f.name }}</td>
+    <td>{{ f.gender | join(", ") }}</td>
+    <td>{{ "%.1f" | format(f.min_discount) }}%</td>
+    <td>{{ f.availability_mode }}</td>
+    <td>{{ "yes" if f.enabled else "no" }}</td>
+    <td class="actions">
+        <a href="/ui/filters/{{ f.id }}/edit">Edit</a>
+        <button type="button"
+                hx-delete="/ui/filters/{{ f.id }}"
+                hx-target="#filter-row-{{ f.id }}"
+                hx-swap="outerHTML"
+                hx-confirm="Delete filter '{{ f.name }}'?">
+            Delete
+        </button>
+    </td>
+</tr>
