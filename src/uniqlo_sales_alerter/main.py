@@ -30,6 +30,7 @@ from uniqlo_sales_alerter.secret import load_or_create_secret
 from uniqlo_sales_alerter.services.bridge_migration import ensure_bridge_migration
 from uniqlo_sales_alerter.services.enrichment import enrich_config
 from uniqlo_sales_alerter.services.sale_checker import SaleChecker
+from uniqlo_sales_alerter.services.upstream_migration import ensure_upstream_migration
 from uniqlo_sales_alerter.settings_ui import build_settings_page
 from uniqlo_sales_alerter.ui.routes import router as ui_router
 
@@ -257,6 +258,7 @@ async def reload_config(app: FastAPI) -> AppConfig:
 
     config = load_config(apply_env_overrides=False)
     await _run_bridge_migration(config)
+    await _run_upstream_migration(config)
     checker = SaleChecker(config)
     await _try_enrich(config, checker.http_client)
 
@@ -280,6 +282,16 @@ async def _run_bridge_migration(config: AppConfig) -> None:
     async with async_session_factory() as session:
         async with session.begin():
             await ensure_bridge_migration(session, config)
+
+
+async def _run_upstream_migration(config: AppConfig) -> None:
+    """Import upstream watched/ignored/seen state once per install (best-effort)."""
+    try:
+        async with async_session_factory() as session:
+            async with session.begin():
+                await ensure_upstream_migration(session, config)
+    except Exception:
+        logger.exception("Upstream migration failed — leaving source files in place")
 
 
 @asynccontextmanager
