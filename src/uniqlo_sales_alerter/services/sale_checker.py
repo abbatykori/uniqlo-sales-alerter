@@ -10,13 +10,15 @@ Delegates to focused modules:
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from uniqlo_sales_alerter.clients import SaleSourceClient, UniqloClient
+from uniqlo_sales_alerter.db.engine import async_session_factory as default_session_factory
 from uniqlo_sales_alerter.models.products import SaleCheckResult, UniqloProduct
-from uniqlo_sales_alerter.services.filters import apply_filters
+from uniqlo_sales_alerter.services.filters import apply_filters as _legacy_apply_filters
+from uniqlo_sales_alerter.services.matcher import Matcher
 from uniqlo_sales_alerter.services.state import SeenVariantStore
 from uniqlo_sales_alerter.services.stock import StockVerifier
 
@@ -24,10 +26,6 @@ if TYPE_CHECKING:
     from uniqlo_sales_alerter.config import AppConfig, WatchedVariant
 
 logger = logging.getLogger(__name__)
-
-_DEFAULT_STATE_PATH = Path(
-    os.environ.get("STATE_FILE", Path.cwd() / ".seen_variants.json"),
-)
 
 
 class SaleChecker:
@@ -37,10 +35,12 @@ class SaleChecker:
         self,
         config: AppConfig,
         *,
-        state_file: Path | None = None,
+        client: SaleSourceClient | None = None,
+        session_factory: async_sessionmaker[AsyncSession] | None = None,
     ) -> None:
         self._config = config
-        self._client = UniqloClient(config)
+        self._client: SaleSourceClient = client or UniqloClient(config)
+        self._session_factory = session_factory or default_session_factory
         self.last_result: SaleCheckResult | None = None
 
         self._watched_ids, self._watched_by_product = self._index_watched(
@@ -54,23 +54,22 @@ class SaleChecker:
         ]
 
         self._state = SeenVariantStore(
-            state_file or _DEFAULT_STATE_PATH,
+            self._session_factory,
             suppress_low_stock=config.notifications.suppress_low_stock_alerts,
             low_stock_threshold=config.notifications.low_stock_threshold,
         )
-        self._seen_variants: set[str] = (
-            self._state.load()
-            if config.notifications.notify_on == "new_deals"
-            else set()
-        )
+        # Lazy seen-set: loaded on first check() so __init__ stays sync.
+        self._seen_variants: set[str] | None = None
 
         self._stock_verifier = StockVerifier(
             self._client, config, self._watched_by_product,
         )
 
+        self._matcher = Matcher(config, self._session_factory)
+
     @property
-    def http_client(self) -> UniqloClient:
-        """The underlying Uniqlo API client."""
+    def http_client(self) -> SaleSourceClient:
+        """The underlying catalogue client."""
         return self._client
 
     async def close(self) -> None:
@@ -89,8 +88,27 @@ class SaleChecker:
         all_products = await self._include_watched_products(sale_products)
         sale_pids = {p.product_id.upper() for p in sale_products}
 
-        matching = self._apply_filters(all_products, sale_pids)
+        matching = await self._matcher.apply(
+            all_products,
+            watched_ids=self._watched_ids,
+            watched_by_product=self._watched_by_product,
+            ignored_ids=self._ignored_ids,
+            global_ignored_keywords=self._ignored_keywords,
+            sale_product_ids=sale_pids,
+        )
         matching = await self._verify_stock(matching)
+
+        # Seen-set load semantics (preserved from upstream):
+        # - notify_on=new_deals: load persisted set on first check; new
+        #   deals are those not previously seen across restarts.
+        # - notify_on=all_then_new: start with empty set each process so the
+        #   first check after startup reports everything currently matched.
+        # - notify_on=every_check: always empty set; every match is a new deal.
+        if self._seen_variants is None:
+            if self._config.notifications.notify_on == "new_deals":
+                self._seen_variants = await self._state.load()
+            else:
+                self._seen_variants = set()
 
         current_variants: set[str] = set()
         for item in matching:
@@ -109,7 +127,7 @@ class SaleChecker:
         )
 
         self._seen_variants = current_variants
-        self._save_state(current_variants)
+        await self._state.save(current_variants)
         self.last_result = result
         return result
 
@@ -122,8 +140,16 @@ class SaleChecker:
         products: list[UniqloProduct],
         sale_product_ids: set[str] | None = None,
     ) -> list:
-        """Delegate to :func:`filters.apply_filters`."""
-        return apply_filters(
+        """Sync legacy-filter delegate, kept for unit-test ergonomics.
+
+        Production goes through ``self._matcher.apply`` in :meth:`check`. This
+        helper applies the legacy ``config.filters`` single-filter pipeline
+        directly — used by tests that exercise individual predicates without
+        spinning up the SQLite-backed matcher loop. New behaviour (multi-filter
+        matching, availability_mode, per-filter snooze) is covered by
+        :mod:`tests.unit.services.test_matcher`.
+        """
+        return _legacy_apply_filters(
             products,
             config=self._config,
             watched_ids=self._watched_ids,
@@ -140,10 +166,6 @@ class SaleChecker:
     def _variant_keys(self, item) -> set[str]:
         """Delegate to :meth:`SeenVariantStore.variant_keys`."""
         return self._state.variant_keys(item)
-
-    def _save_state(self, variants: set[str]) -> None:
-        """Delegate to :meth:`SeenVariantStore.save`."""
-        self._state.save(variants)
 
     # ------------------------------------------------------------------
     # Watched product helpers

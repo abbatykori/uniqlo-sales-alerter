@@ -19,7 +19,7 @@ from uniqlo_sales_alerter.models.products import (
 )
 
 if TYPE_CHECKING:
-    from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
+    from uniqlo_sales_alerter.clients import SaleSourceClient
     from uniqlo_sales_alerter.config import AppConfig, WatchedVariant
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class StockVerifier:
 
     def __init__(
         self,
-        client: UniqloClient,
+        client: SaleSourceClient,
         config: AppConfig,
         watched_by_product: dict[str, list[WatchedVariant]],
     ) -> None:

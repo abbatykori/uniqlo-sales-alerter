@@ -566,6 +566,14 @@ _TEMPLATE = """\
     <div class="section-header">Filters</div>
     <div class="section-body">
 
+      <div class="field" style="background:#fffbe6;border:1px solid #facc15;
+           padding:0.6rem 0.8rem;border-radius:6px">
+        <strong>Note:</strong> the Gender, Min sale percentage, and Size filters
+        below are no longer used for matching. Manage active filters at
+        <a href="/ui/filters">/ui/filters</a>. Watched variants, ignored products,
+        and ignored keywords on this page still apply.
+      </div>
+
       <div class="field">
         <label>Gender</label>
         <div class="help">Which categories to include in sale checks.</div>

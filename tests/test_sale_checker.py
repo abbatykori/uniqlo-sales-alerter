@@ -2,17 +2,37 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from sqlalchemy import text
 
 from uniqlo_sales_alerter.config import AppConfig
+from uniqlo_sales_alerter.db.engine import engine
 from uniqlo_sales_alerter.models.products import UniqloProduct
 from uniqlo_sales_alerter.services.sale_checker import SaleChecker
 
-from .conftest import make_raw_product, noop_verify, noop_watched_fetch, sample_deal
+from .conftest import (
+    make_raw_product,
+    noop_verify,
+    noop_watched_fetch,
+    sample_deal,
+    seed_saved_filter_from_legacy,
+)
+
+
+@pytest.fixture(autouse=True)
+def _clean_state_tables():
+    """Reset ``seen_variants`` and ``saved_filters`` between tests."""
+
+    async def _truncate() -> None:
+        async with engine.begin() as conn:
+            await conn.execute(text("DELETE FROM seen_variants"))
+            await conn.execute(text("DELETE FROM saved_filters"))
+
+    asyncio.run(_truncate())
+    yield
 
 _MEN = "MEN"
 
@@ -587,10 +607,13 @@ class TestStockVerification:
 
 
 class TestSaleCheckerCheck:
+    @pytest.fixture(autouse=True)
+    async def _seed_filter(self, sale_config: AppConfig):
+        await seed_saved_filter_from_legacy(sale_config)
+
     @pytest.mark.asyncio
-    async def test_check_tracks_new_deals(self, sale_config: AppConfig, tmp_path: Path):
-        state_file = tmp_path / ".seen_variants.json"
-        checker = SaleChecker(sale_config, state_file=state_file)
+    async def test_check_tracks_new_deals(self, sale_config: AppConfig):
+        checker = SaleChecker(sale_config)
         products = [
             _product(_raw("E001")),
             _product(_raw("E002", promo=30)),
@@ -615,10 +638,9 @@ class TestSaleCheckerCheck:
 
     @pytest.mark.asyncio
     async def test_check_detects_newly_added_deal(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
-        state_file = tmp_path / ".seen_variants.json"
-        checker = SaleChecker(sale_config, state_file=state_file)
+        checker = SaleChecker(sale_config)
         products_v1 = [_product(_raw("E001"))]
         products_v2 = [
             _product(_raw("E001")),
@@ -643,14 +665,13 @@ class TestSaleCheckerCheck:
 
     @pytest.mark.asyncio
     async def test_state_persists_across_instances(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
         """With notify_on=new_deals, a new instance remembers previous deals."""
         sale_config.notifications.notify_on = "new_deals"
-        state_file = tmp_path / ".seen_variants.json"
         products = [_product(_raw("E001"))]
 
-        checker1 = SaleChecker(sale_config, state_file=state_file)
+        checker1 = SaleChecker(sale_config)
         with (
             patch.object(
                 checker1._client,
@@ -664,9 +685,8 @@ class TestSaleCheckerCheck:
             result1 = await checker1.check()
             assert len(result1.new_deals) == 1
 
-        assert state_file.exists()
 
-        checker2 = SaleChecker(sale_config, state_file=state_file)
+        checker2 = SaleChecker(sale_config)
         with (
             patch.object(
                 checker2._client,
@@ -682,14 +702,13 @@ class TestSaleCheckerCheck:
 
     @pytest.mark.asyncio
     async def test_new_variant_detected_as_new(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
         """When a product gains a new size variant, it counts as a new deal."""
-        state_file = tmp_path / ".seen_variants.json"
         products_v1 = [_product(_raw("E001", sizes=["M"]))]
         products_v2 = [_product(_raw("E001", sizes=["M", "L"]))]
 
-        checker = SaleChecker(sale_config, state_file=state_file)
+        checker = SaleChecker(sale_config)
         with (
             patch.object(
                 checker._client,
@@ -710,14 +729,13 @@ class TestSaleCheckerCheck:
 
     @pytest.mark.asyncio
     async def test_price_change_detected_as_new(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
         """When a product's discount percentage changes, it counts as a new deal."""
-        state_file = tmp_path / ".seen_variants.json"
         products_v1 = [_product(_raw("E001", base=100, promo=40))]  # 60% off
         products_v2 = [_product(_raw("E001", base=100, promo=30))]  # 70% off
 
-        checker = SaleChecker(sale_config, state_file=state_file)
+        checker = SaleChecker(sale_config)
         with (
             patch.object(
                 checker._client,
@@ -738,74 +756,28 @@ class TestSaleCheckerCheck:
             )
             assert result2.new_deals[0].discount_percentage == 70.0
 
-    @pytest.mark.asyncio
-    async def test_corrupt_state_file_starts_fresh(
-        self, sale_config: AppConfig, tmp_path: Path,
-    ):
-        sale_config.notifications.notify_on = "new_deals"
-        state_file = tmp_path / ".seen_variants.json"
-        state_file.write_text("not valid json!!!", encoding="utf-8")
-
-        checker = SaleChecker(sale_config, state_file=state_file)
-        assert checker._seen_variants == set()
-
-        products = [_product(_raw("E001"))]
-        with (
-            patch.object(
-                checker._client,
-                "fetch_sale_products",
-                new_callable=AsyncMock,
-                return_value=products,
-            ),
-            noop_verify(checker),
-            noop_watched_fetch(checker),
-        ):
-            result = await checker.check()
-            assert len(result.new_deals) == 1
-
-    @pytest.mark.asyncio
-    async def test_state_file_format(
-        self, sale_config: AppConfig, tmp_path: Path,
-    ):
-        """The state file contains variant keys as product:color:size:discount."""
-        state_file = tmp_path / ".seen_variants.json"
-        products = [_product(_raw("E001", sizes=["M"]))]
-
-        checker = SaleChecker(sale_config, state_file=state_file)
-        with (
-            patch.object(
-                checker._client,
-                "fetch_sale_products",
-                new_callable=AsyncMock,
-                return_value=products,
-            ),
-            noop_verify(checker),
-            noop_watched_fetch(checker),
-        ):
-            await checker.check()
-
-        data = json.loads(state_file.read_text(encoding="utf-8"))
-        assert "updated_at" in data
-        assert isinstance(data["variants"], list)
-        assert len(data["variants"]) > 0
-        for key in data["variants"]:
-            parts = key.split(":")
-            assert len(parts) == 4, f"Expected product:color:size:discount, got {key}"
+    # ``test_corrupt_state_file_starts_fresh`` and ``test_state_file_format``
+    # tested the pre-fork JSON state layer. SQLite state has no equivalent
+    # corruption mode; key-format coverage is in
+    # tests/unit/services/test_state_sqlite.py.
 
 
 class TestAllThenNewMode:
     """Tests for the all_then_new notification mode."""
 
+    @pytest.fixture(autouse=True)
+    async def _seed_filter(self, sale_config: AppConfig):
+        await seed_saved_filter_from_legacy(sale_config)
+
     @pytest.mark.asyncio
     async def test_ignores_state_file_on_startup(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
         """all_then_new does not load the state file, so first check reports all."""
-        state_file = tmp_path / ".seen_variants.json"
         products = [_product(_raw("E001"))]
 
         # First instance: run a check so the state file is written.
-        checker1 = SaleChecker(sale_config, state_file=state_file)
+        checker1 = SaleChecker(sale_config)
         with (
             patch.object(
                 checker1._client,
@@ -817,10 +789,9 @@ class TestAllThenNewMode:
             noop_watched_fetch(checker1),
         ):
             await checker1.check()
-        assert state_file.exists()
 
         # Second instance (simulates restart): state file is ignored.
-        checker2 = SaleChecker(sale_config, state_file=state_file)
+        checker2 = SaleChecker(sale_config)
         with (
             patch.object(
                 checker2._client,
@@ -838,13 +809,12 @@ class TestAllThenNewMode:
 
     @pytest.mark.asyncio
     async def test_subsequent_checks_only_new(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
         """After the first check, only genuinely new variants are flagged."""
-        state_file = tmp_path / ".seen_variants.json"
         products = [_product(_raw("E001"))]
 
-        checker = SaleChecker(sale_config, state_file=state_file)
+        checker = SaleChecker(sale_config)
         with (
             patch.object(
                 checker._client,
@@ -863,14 +833,13 @@ class TestAllThenNewMode:
 
     @pytest.mark.asyncio
     async def test_new_deals_mode_loads_state(
-        self, sale_config: AppConfig, tmp_path: Path,
+        self, sale_config: AppConfig,
     ):
         """Contrast: new_deals mode loads state and suppresses already-seen deals."""
-        state_file = tmp_path / ".seen_variants.json"
         products = [_product(_raw("E001"))]
 
         # Run once with all_then_new to populate the state file.
-        checker1 = SaleChecker(sale_config, state_file=state_file)
+        checker1 = SaleChecker(sale_config)
         with (
             patch.object(
                 checker1._client,
@@ -885,7 +854,7 @@ class TestAllThenNewMode:
 
         # Switch to new_deals mode and create a fresh instance.
         sale_config.notifications.notify_on = "new_deals"
-        checker2 = SaleChecker(sale_config, state_file=state_file)
+        checker2 = SaleChecker(sale_config)
         with (
             patch.object(
                 checker2._client,
@@ -906,7 +875,7 @@ class TestWatchedProductFetch:
     """Tests for fetching watched products that aren't in the sale catalogue."""
 
     @pytest.mark.asyncio
-    async def test_watched_not_on_sale_is_fetched_separately(self, tmp_path: Path):
+    async def test_watched_not_on_sale_is_fetched_separately(self):
         """A watched product that isn't on sale should be fetched via fetch_products_by_ids."""
         config = AppConfig.model_validate({
             "filters": {
@@ -918,7 +887,7 @@ class TestWatchedProductFetch:
                 ],
             },
         })
-        checker = SaleChecker(config, state_file=tmp_path / ".sv.json")
+        checker = SaleChecker(config)
 
         sale_products = [_product(_raw("E001"))]
         watched_product = _product(_raw("E777-001", promo=None))
@@ -947,7 +916,7 @@ class TestWatchedProductFetch:
         assert watched_item.discount_percentage == 0.0
 
     @pytest.mark.asyncio
-    async def test_watched_already_on_sale_not_fetched_again(self, tmp_path: Path):
+    async def test_watched_already_on_sale_not_fetched_again(self):
         """When a watched product is already in the sale results, skip fetch_products_by_ids."""
         config = AppConfig.model_validate({
             "filters": {
@@ -959,7 +928,7 @@ class TestWatchedProductFetch:
                 ],
             },
         })
-        checker = SaleChecker(config, state_file=tmp_path / ".sv.json")
+        checker = SaleChecker(config)
 
         sale_products = [_product(_raw("E001"))]
 
@@ -980,9 +949,7 @@ class TestWatchedProductFetch:
         assert len(result.matching_deals) == 1
 
     @pytest.mark.asyncio
-    async def test_multiple_watched_variants_same_product_fetched_once(
-        self, tmp_path: Path,
-    ):
+    async def test_multiple_watched_variants_same_product_fetched_once(self):
         """Two watched variants for the same product should trigger only one fetch."""
         config = AppConfig.model_validate({
             "filters": {
@@ -995,7 +962,7 @@ class TestWatchedProductFetch:
                 ],
             },
         })
-        checker = SaleChecker(config, state_file=tmp_path / ".sv.json")
+        checker = SaleChecker(config)
 
         watched_product = _product(_raw("E777-001", promo=None))
 
@@ -1241,70 +1208,57 @@ class TestNewDealDedup:
             stock_quantities=[qty], stock_statuses=["IN_STOCK"],
         )
 
-    def _run_check(
-        self, cfg: AppConfig, item, state_file: Path,
+    async def _run_check(
+        self, cfg: AppConfig, item,
     ) -> tuple[set[str], list[str]]:
-        """Simulate one check cycle; return (new_seen_set, new_deal_keys)."""
-        checker = SaleChecker(cfg, state_file=state_file)
-        seen_before = checker._seen_variants
+        """Simulate one check cycle; return (current_keys, newly_detected_keys)."""
+        checker = SaleChecker(cfg)
+        seen_before = await checker._state.load()
         keys = checker._variant_keys(item)
         new_keys = sorted(keys - seen_before)
-        checker._save_state(keys)
+        await checker._state.save(keys)
         return keys, new_keys
 
-    def test_qty_fluctuation_above_threshold_does_not_retrigger(
-        self, tmp_path: Path,
-    ):
+    @pytest.mark.asyncio
+    async def test_qty_fluctuation_above_threshold_does_not_retrigger(self):
         """20 -> 10 (both above 5): no alert either time."""
         cfg = self._cfg(suppress=False, threshold=5)
-        state = tmp_path / ".seen.json"
-        _, first = self._run_check(cfg, self._build_item(20), state)
-        _, second = self._run_check(cfg, self._build_item(10), state)
+        _, first = await self._run_check(cfg, self._build_item(20))
+        _, second = await self._run_check(cfg, self._build_item(10))
         assert first, "first check must fire"
         assert second == [], "qty drop within normal stock must not retrigger"
 
-    def test_oos_to_low_restock_suppressed_when_toggle_on(
-        self, tmp_path: Path,
-    ):
+    @pytest.mark.asyncio
+    async def test_oos_to_low_restock_suppressed_when_toggle_on(self):
         """Item at 20 → OOS → restock at 2 (≤ threshold) must NOT alert."""
         cfg = self._cfg(suppress=True, threshold=5)
-        state = tmp_path / ".seen.json"
-        # First run: healthy qty → key saved.
-        self._run_check(cfg, self._build_item(20), state)
-        # OOS run: item missing from matching → keys for this item not in current.
-        # We simulate by having an empty matching set: just clear state.
-        SaleChecker(cfg, state_file=state)._save_state(set())
-        # Restock at low level — toggle must suppress.
-        _, new_keys = self._run_check(cfg, self._build_item(2), state)
+        await self._run_check(cfg, self._build_item(20))
+        # OOS round: simulate by saving an empty set so no rows remain.
+        await SaleChecker(cfg)._state.save(set())
+        _, new_keys = await self._run_check(cfg, self._build_item(2))
         assert new_keys == [], "low-stock restock must be suppressed"
 
-    def test_oos_to_low_restock_alerts_when_toggle_off(
-        self, tmp_path: Path,
-    ):
+    @pytest.mark.asyncio
+    async def test_oos_to_low_restock_alerts_when_toggle_off(self):
         """Same sequence without the toggle: user gets the classic restock alert."""
         cfg = self._cfg(suppress=False, threshold=5)
-        state = tmp_path / ".seen.json"
-        self._run_check(cfg, self._build_item(20), state)
-        SaleChecker(cfg, state_file=state)._save_state(set())
-        _, new_keys = self._run_check(cfg, self._build_item(2), state)
+        await self._run_check(cfg, self._build_item(20))
+        await SaleChecker(cfg)._state.save(set())
+        _, new_keys = await self._run_check(cfg, self._build_item(2))
         assert new_keys, "without the toggle, any restock should retrigger"
 
-    def test_low_restock_then_climb_fires_once_above_threshold(
-        self, tmp_path: Path,
-    ):
+    @pytest.mark.asyncio
+    async def test_low_restock_then_climb_fires_once_above_threshold(self):
         """Toggle on: suppressed at 2, then alert fires when qty climbs to 20."""
         cfg = self._cfg(suppress=True, threshold=5)
-        state = tmp_path / ".seen.json"
-        # Restock at low level — no alert.
-        _, low = self._run_check(cfg, self._build_item(2), state)
+        _, low = await self._run_check(cfg, self._build_item(2))
         assert low == []
-        # Climb to healthy — alert fires.
-        _, high = self._run_check(cfg, self._build_item(20), state)
+        _, high = await self._run_check(cfg, self._build_item(20))
         assert high, "alert must fire when qty climbs above the threshold"
 
-    def test_first_seen_low_stock_is_suppressed(self, tmp_path: Path):
+    @pytest.mark.asyncio
+    async def test_first_seen_low_stock_is_suppressed(self):
         """A brand-new item first spotted at low stock must not alert."""
         cfg = self._cfg(suppress=True, threshold=5)
-        state = tmp_path / ".seen.json"
-        _, new_keys = self._run_check(cfg, self._build_item(3), state)
+        _, new_keys = await self._run_check(cfg, self._build_item(3))
         assert new_keys == []

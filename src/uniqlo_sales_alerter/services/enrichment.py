@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from uniqlo_sales_alerter.models.products import UniqloProduct, build_product_url
 
 if TYPE_CHECKING:
-    from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
+    from uniqlo_sales_alerter.clients import SaleSourceClient
     from uniqlo_sales_alerter.config import AppConfig
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def _find_size_name(product: UniqloProduct, size_code: str) -> str:
     return ""
 
 
-async def enrich_config(config: AppConfig, client: UniqloClient) -> bool:
+async def enrich_config(config: AppConfig, client: SaleSourceClient) -> bool:
     """Fill in missing metadata for watched variants and ignored products.
 
     Returns ``True`` when at least one entry was updated (caller should

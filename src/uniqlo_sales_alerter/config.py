@@ -397,11 +397,19 @@ class CountryCapabilities:
                           ``"code"`` uses ``colorCode``/``sizeCode`` (the
                           full API ``code`` values like ``COL09``,
                           ``SMA003``) without a price-group path segment.
+    ``store_stock_only_reliable``
+                          — ``True`` (default) when the API's per-product
+                          ``storeStockOnly`` flag is trusted for filter
+                          decisions. ``False`` for countries where the flag
+                          is absent or unreliable; in that case the matcher
+                          treats ``availability_mode='in_store'`` as
+                          ``'both'`` with a logged warning.
     """
     listing_sources: tuple[str, ...] = ("v5_disc",)
     stock_api: str = "v5"
     is_limited: bool = False
     url_style: str = "display_code"
+    store_stock_only_reliable: bool = True
 
 
 _COUNTRY_CAPABILITIES: dict[str, CountryCapabilities] = {
@@ -421,14 +429,15 @@ _COUNTRY_CAPABILITIES: dict[str, CountryCapabilities] = {
     "id": CountryCapabilities(listing_sources=("v5_disc", "v5_ltd")),
     "vn": CountryCapabilities(listing_sources=("v5_disc", "v5_ltd")),
     "my": CountryCapabilities(listing_sources=("v5_disc", "v5_ltd")),
-    # SEA v3 stores — stock API unreliable, storefront uses code-style URLs
+    # SEA v3 stores — stock API unreliable, storefront uses code-style URLs.
+    # storeStockOnly flag absent / unreliable on these v3 endpoints.
     "ph": CountryCapabilities(
         listing_sources=("v3_disc", "v3_ltd"), stock_api="none",
-        url_style="code",
+        url_style="code", store_stock_only_reliable=False,
     ),
     "th": CountryCapabilities(
         listing_sources=("v5_ltd", "v3_disc", "v3_ltd"), stock_api="none",
-        url_style="code",
+        url_style="code", store_stock_only_reliable=False,
     ),
     # Limited-support countries — no discount %
     "us": CountryCapabilities(
@@ -440,7 +449,7 @@ _COUNTRY_CAPABILITIES: dict[str, CountryCapabilities] = {
     "jp": CountryCapabilities(
         listing_sources=("v5_disc", "v5_ltd"), is_limited=True,
     ),
-    "kr": CountryCapabilities(is_limited=True),
+    "kr": CountryCapabilities(is_limited=True, store_stock_only_reliable=False),
     "sg": CountryCapabilities(
         listing_sources=("v5_disc", "sale_paths"), is_limited=True,
     ),

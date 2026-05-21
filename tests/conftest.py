@@ -32,6 +32,43 @@ def _migrated_test_db() -> object:
     if _TEST_DB_PATH.exists():
         _TEST_DB_PATH.unlink()
 
+
+async def seed_saved_filter_from_legacy(config: AppConfig, *, name: str = "Test") -> int:
+    """Insert one SavedFilter row mirroring ``config.filters`` and return its id.
+
+    Test helper: matcher reads filters from SQLite (post-PR-4), so tests that
+    build an ad-hoc ``AppConfig`` must also seed a corresponding saved-filter
+    row. The bridge migration in PR-5 wraps this same translation in
+    production code; this helper is the test-side equivalent that always
+    inserts (no idempotency check).
+    """
+    from sqlalchemy import text
+
+    from uniqlo_sales_alerter.db.engine import async_session_factory, engine
+    from uniqlo_sales_alerter.db.models import SavedFilter
+
+    async with engine.begin() as conn:
+        await conn.execute(text("DELETE FROM saved_filters"))
+
+    f = config.filters
+    row = SavedFilter(
+        name=name,
+        gender=[g.lower() for g in f.gender],
+        min_discount=f.min_sale_percentage,
+        sizes_clothing=list(f.sizes.clothing),
+        sizes_pants=list(f.sizes.pants),
+        sizes_shoes=list(f.sizes.shoes),
+        one_size_match=1 if f.sizes.one_size else 0,
+        availability_mode="both",
+        ignored_keywords=list(f.ignored_keywords),
+        enabled=1,
+    )
+    async with async_session_factory() as session:
+        async with session.begin():
+            session.add(row)
+        await session.refresh(row)
+        return row.id
+
 _SAMPLE_BASE_URL = "https://www.uniqlo.com/de/de/products/E123456-000/00?colorDisplayCode=00"
 
 

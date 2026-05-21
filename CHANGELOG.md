@@ -6,7 +6,7 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 ## Fork foundation — unreleased (Abbaty)
 
-Initial foundation work for the [Abbaty fork](docs/specs/). Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and HTMX UI without changing existing behaviour. Steps 1-6 of the foundation phase per `docs/specs/00-handoff.md`. No version bump until the multi-arch ghcr.io release (step 17). The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
+Foundation work for the [Abbaty fork](docs/specs/). Steps 1-8 of the build per `docs/specs/00-handoff.md` — the critical path. Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and HTMX UI, and switches the matcher onto multi-saved-filter matching with per-filter snooze and availability_mode. No version bump until the multi-arch ghcr.io release (step 17). The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
 
 ### Added
 
@@ -24,11 +24,27 @@ Initial foundation work for the [Abbaty fork](docs/specs/). Builds the scaffoldi
 - **`store_country`, `ui_language`, `deep_discount_threshold`** config keys — top-level fork fields coexisting with upstream's `uniqlo.country`. `store_country` defaults to `uniqlo.country` via a model validator so old YAML files still work. Three new env vars: `STORE_COUNTRY`, `UI_LANGUAGE`, `DEEP_DISCOUNT_THRESHOLD`. New env vars also documented: `ALERTER_DB_PATH`, `ALERTER_SECRET`.
 - **Babel i18n pipeline** — `babel.cfg`, `i18n/__init__.py` (translator factory + module-level `_`), English `messages.po` shipping `"Healthy"`/`"Degraded"` for the new healthcheck. Compiled `.mo` produced in the Docker build stage; identity fallback for unknown locales. Workflow documented in `docs/i18n.md`.
 - **Saved-filter REST API** at `/api/v1/filters` — full CRUD plus `POST /{id}/duplicate`. Pydantic schemas validate gender (must be subset of `men/women/unisex/kids/baby`), discount range (0-100), and `availability_mode` (one of `online/in_store/both`). 409 on duplicate names.
-- **Hidden HTMX UI** at `/ui/filters` — list, new, edit, delete via HTMX swaps. Not linked from `/settings` or any nav. The legacy single-filter editor on `/settings` remains the authoritative editor until step 8 swaps the matcher onto `saved_filters`.
+- **Hidden HTMX UI** at `/ui/filters` — list, new, edit, delete via HTMX swaps. The legacy single-filter editor on `/settings` is now inert for matching (see below).
+- **`SaleSourceClient` Protocol** — runtime-checkable Protocol in `clients/protocol.py` covering the six-method `UniqloClient` public surface. `SaleChecker`, `StockVerifier`, and `enrich_config` type-hint against the protocol so tests can pass any duck-typed client.
+- **`UniqloProduct.store_stock_only`** (alias `storeStockOnly`) — parses the per-product channel flag from the API response. Used by the new `availability_mode` filter.
+- **`SaleItem.matched_filter_ids`** — new field defaulting to `[]`, populated by the matcher with the IDs of the saved filters that matched a given product. Downstream notifications and the heatmap will tag deals with the filter(s) that triggered them.
+- **`CountryCapabilities.store_stock_only_reliable`** — capabilities flag, defaulting to True. False for `ph`, `th`, `kr` where the API's `storeStockOnly` is empirically absent or unreliable; the matcher logs a one-shot warning and falls back to `availability_mode='both'` on those countries.
+- **`services/matcher.py`** — new multi-filter matcher. For each product, iterates every enabled, non-snoozed `saved_filter` row, evaluates gender/discount/sizes/availability_mode/per-filter ignored_keywords, and emits a single `SaleItem` tagged with the IDs of all filters that matched. Watched variants bypass all filters and emit with `matched_filter_ids=[]`. Snooze is enforced at the SQL load step (`WHERE enabled=1 AND (snooze_until IS NULL OR snooze_until <= now)`). When no filters are active, only watched variants are reported, with a rate-limited log line.
+- **SQLite `SeenVariantStore`** — `services/state.py` rewritten to async SQLAlchemy. The pre-fork `.seen_variants.json` JSON file is retired. Variant-key format unchanged (`product_id:color:size:discount` or `:sale` suffix); `save()` parses each key into the `product_id`/`color_code`/`size_code`/`discount_pct` columns so future dashboards can query without re-parsing. New `prune_older_than(days=365)` helper (the daily cron call is wired in step 9).
+- **Bridge migration** — `services/bridge_migration.py`. On first startup (idempotent via `migrations_applied` row `bridge_v1`), seeds one `saved_filters` row named `"Imported"` from `config.yaml::filters` if the legacy filter has any non-default field. Default-shaped legacy configs skip the seed. Watched variants, ignored products, and global ignored keywords stay on `config.yaml` until step 15.
+
+### Changed
+
+- **`SaleChecker.__init__`** now accepts an optional `client: SaleSourceClient` injection and a `session_factory: async_sessionmaker[AsyncSession]`. The `state_file` parameter is gone (state is in SQLite). `SaleChecker._matcher.apply(...)` replaces the legacy `filters.apply_filters(...)` in the `check()` pipeline.
+- **Legacy `/settings` filters editor** — now displays a yellow banner above the section: "These filters no longer drive matching. Manage active filters at `/ui/filters`. (Watched variants, ignored products, and ignored keywords below still apply.)" Watched and ignored controls on the page remain effective.
+- **`SaleChecker._apply_filters`** retained as a sync test-compat shim calling the legacy single-filter pipeline directly. Production goes through `SaleChecker._matcher.apply` in `check()`. New matcher behaviour is covered by `tests/unit/services/test_matcher*.py`.
+- **`docker-compose.yml`** no longer sets `STATE_FILE=...`. The JSON state file is gone.
 
 ### Removed
 
 - **`.github/workflows/docker-publish.yml`** — upstream's Docker Hub publish workflow targeting `kequach/uniqlo-sales-alerter`. Replaced by ghcr.io publishing in step 17.
+- **`STATE_FILE` env var** and `.seen_variants.json` runtime file — state lives in the `seen_variants` SQLite table.
+- **`filters.apply_filters` call sites in `SaleChecker.check()`** — replaced by `self._matcher.apply(...)`. The function itself remains in `filters.py` for the test shim.
 
 ---
 

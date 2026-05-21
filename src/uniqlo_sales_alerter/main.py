@@ -18,9 +18,11 @@ from uniqlo_sales_alerter.api.routes import _redact_secrets, actions_router, rou
 from uniqlo_sales_alerter.api.saved_filters import router as saved_filters_router
 from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
 from uniqlo_sales_alerter.config import AppConfig, load_config, save_config
+from uniqlo_sales_alerter.db.engine import async_session_factory
 from uniqlo_sales_alerter.db.schema import ensure_schema
 from uniqlo_sales_alerter.models.products import SaleCheckResult
 from uniqlo_sales_alerter.notifications.dispatcher import NotificationDispatcher
+from uniqlo_sales_alerter.services.bridge_migration import ensure_bridge_migration
 from uniqlo_sales_alerter.services.enrichment import enrich_config
 from uniqlo_sales_alerter.services.sale_checker import SaleChecker
 from uniqlo_sales_alerter.settings_ui import build_settings_page
@@ -147,6 +149,7 @@ async def reload_config(app: FastAPI) -> AppConfig:
     await current.sale_checker.close()
 
     config = load_config(apply_env_overrides=False)
+    await _run_bridge_migration(config)
     checker = SaleChecker(config)
     await _try_enrich(config, checker.http_client)
 
@@ -163,12 +166,21 @@ async def reload_config(app: FastAPI) -> AppConfig:
     return config
 
 
+async def _run_bridge_migration(config: AppConfig) -> None:
+    """Seed the legacy single filter into ``saved_filters`` once per install."""
+    async with async_session_factory() as session:
+        async with session.begin():
+            await ensure_bridge_migration(session, config)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await ensure_schema()
 
     config = load_config()
     save_config(config)
+
+    await _run_bridge_migration(config)
 
     checker = SaleChecker(config)
     dispatcher = NotificationDispatcher(config)

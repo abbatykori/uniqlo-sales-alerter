@@ -185,6 +185,7 @@ class UniqloProduct(BaseModel, populate_by_name=True):
     representative_color_display_code: str = Field(
         default="", alias="representativeColorDisplayCode"
     )
+    store_stock_only: bool = Field(default=False, alias="storeStockOnly")
 
     @property
     def is_on_sale(self) -> bool:
@@ -286,6 +287,10 @@ class SaleItem(BaseModel):
     rating_count: int | None = None
     is_watched: bool = False
     has_known_discount: bool = True
+    # IDs of the SavedFilter rows that matched this product. Empty list means
+    # the deal was emitted via watched-variant bypass or via the legacy
+    # single-filter pipeline. Populated by services/matcher.py from step 8.
+    matched_filter_ids: list[int] = Field(default_factory=list)
 
     def variant_at(self, index: int) -> VariantInfo:
         """Return variant data at *index* with safe defaults for sparse lists."""
