@@ -35,5 +35,12 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
+      - name: Compile gettext catalogues
+        run: |
+          pybabel compile \
+            -d src/uniqlo_sales_alerter/i18n/locale \
+            -l en \
+            -i src/uniqlo_sales_alerter/i18n/locale/en/LC_MESSAGES/messages.po
+
       - name: Pytest
         run: python -m pytest tests/ -m "not e2e" -v
