@@ -1,12 +1,38 @@
-<tr id="filter-row-{{ f.id }}">
+{% set is_snoozed = f.snooze_until is not none %}
+<tr id="filter-row-{{ f.id }}"{% if is_snoozed %} style="opacity:0.55;font-style:italic"{% endif %}>
     <td>{{ f.id }}</td>
-    <td>{{ f.name }}</td>
+    <td>
+        {{ f.name }}
+        {% if is_snoozed %}
+            {% if f.snooze_until.year == 9999 %}
+                <div class="muted" style="font-size:0.85em">Snoozed indefinitely.</div>
+            {% else %}
+                <div class="muted" style="font-size:0.85em">Snoozed until {{ f.snooze_until.strftime("%Y-%m-%d %H:%M") }} UTC.</div>
+            {% endif %}
+        {% endif %}
+    </td>
     <td>{{ f.gender | join(", ") }}</td>
     <td>{{ "%.1f" | format(f.min_discount) }}%</td>
     <td>{{ f.availability_mode }}</td>
     <td>{{ "yes" if f.enabled else "no" }}</td>
     <td class="actions">
         <a href="/ui/filters/{{ f.id }}/edit">Edit</a>
+        {% if is_snoozed %}
+            <button type="button"
+                    hx-post="/ui/filters/{{ f.id }}/resume"
+                    hx-target="#filter-row-{{ f.id }}"
+                    hx-swap="outerHTML">
+                Resume now
+            </button>
+        {% else %}
+            <button type="button"
+                    hx-get="/ui/filters/{{ f.id }}/snooze"
+                    hx-target="#snooze-popover-{{ f.id }}"
+                    hx-swap="innerHTML">
+                Snooze
+            </button>
+            <span id="snooze-popover-{{ f.id }}" style="display:inline"></span>
+        {% endif %}
         <button type="button"
                 hx-delete="/ui/filters/{{ f.id }}"
                 hx-target="#filter-row-{{ f.id }}"

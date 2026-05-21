@@ -24,6 +24,8 @@ from uniqlo_sales_alerter.services.saved_filters import (
     duplicate_filter,
     get_filter,
     list_filters,
+    resume_filter,
+    snooze_filter,
     update_filter,
 )
 
@@ -108,3 +110,30 @@ async def duplicate_endpoint(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"filter name already exists: {exc.args[0]}",
         ) from exc
+
+
+@router.post("/{filter_id}/snooze", response_model=SavedFilterRead)
+async def snooze_endpoint(
+    filter_id: int,
+    duration: str = "7d",
+    session: AsyncSession = Depends(get_session),
+) -> SavedFilterRead:
+    try:
+        return await snooze_filter(session, filter_id, duration)
+    except FilterNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc),
+        ) from exc
+
+
+@router.post("/{filter_id}/resume", response_model=SavedFilterRead)
+async def resume_endpoint(
+    filter_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> SavedFilterRead:
+    try:
+        return await resume_filter(session, filter_id)
+    except FilterNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc

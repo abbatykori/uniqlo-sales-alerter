@@ -110,6 +110,58 @@ async def delete_filter(session: AsyncSession, filter_id: int) -> None:
     await session.delete(row)
 
 
+_SNOOZE_DURATIONS: dict[str, int | None] = {
+    "1d": 1,
+    "7d": 7,
+    "30d": 30,
+    "forever": None,
+}
+
+
+async def snooze_filter(
+    session: AsyncSession,
+    filter_id: int,
+    duration: str,
+) -> SavedFilterRead:
+    """Set ``snooze_until`` on a saved filter.
+
+    *duration* is one of ``1d``, ``7d``, ``30d``, ``forever`` (year-9999
+    sentinel). Idempotent: re-applying refreshes the expiry from now.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    if duration not in _SNOOZE_DURATIONS:
+        raise ValueError(
+            f"invalid duration {duration!r}; expected one of "
+            f"{sorted(_SNOOZE_DURATIONS)}"
+        )
+
+    row = await session.get(SavedFilter, filter_id)
+    if row is None:
+        raise FilterNotFound(filter_id)
+
+    days = _SNOOZE_DURATIONS[duration]
+    if days is None:
+        new_until = datetime(9999, 12, 31, tzinfo=timezone.utc)
+    else:
+        new_until = datetime.now(timezone.utc) + timedelta(days=days)
+    row.snooze_until = new_until.replace(tzinfo=None)
+    await session.flush()
+    return _to_read(row)
+
+
+async def resume_filter(
+    session: AsyncSession, filter_id: int
+) -> SavedFilterRead:
+    """Clear ``snooze_until`` so the matcher includes the filter again."""
+    row = await session.get(SavedFilter, filter_id)
+    if row is None:
+        raise FilterNotFound(filter_id)
+    row.snooze_until = None
+    await session.flush()
+    return _to_read(row)
+
+
 async def duplicate_filter(
     session: AsyncSession, filter_id: int
 ) -> SavedFilterRead:

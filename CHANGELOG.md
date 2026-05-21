@@ -54,6 +54,7 @@ Foundation work for the [Abbaty fork](docs/specs/). Steps 1-11 of the build per 
   - `/actions/unwatch/{product_id}?name=&color=&size=&exp=&sig=` per watched size
   - `/actions/snooze?filter_id=&duration={1d,7d,30d,forever}&exp=&sig=` per matched filter
 - **`/actions/snooze` handler** — new route that writes to `saved_filters.snooze_until`. `forever` uses a year-9999 sentinel so the matcher's `WHERE snooze_until IS NULL OR snooze_until <= now` query stays symmetric. Idempotent: re-clicking the same URL just refreshes the timestamp.
+- **Snooze + Resume UI flow (step 12)** — `/ui/filters` rows show a Snooze button that opens an HTMX popover with 1d/7d/30d/forever options; clicking writes to `saved_filters.snooze_until` and replaces the row with a muted/italic version showing "Snoozed until ..." or "Snoozed indefinitely". Snoozed rows replace the Snooze button with a Resume now button that clears the timestamp. Same operations exposed via REST: `POST /api/v1/filters/{id}/snooze?duration=1d|7d|30d|forever` and `POST /api/v1/filters/{id}/resume` (404 missing, 400 invalid duration). `SavedFilterService.snooze` / `resume` underlie both routes.
 
 ### Changed
 

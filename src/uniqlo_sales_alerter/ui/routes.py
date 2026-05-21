@@ -29,6 +29,8 @@ from uniqlo_sales_alerter.services.saved_filters import (
     delete_filter,
     get_filter,
     list_filters,
+    resume_filter,
+    snooze_filter,
     update_filter,
 )
 
@@ -213,3 +215,44 @@ async def delete_view(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     # HTMX swaps the row out by returning empty content.
     return HTMLResponse("", status_code=status.HTTP_200_OK)
+
+
+@router.get("/filters/{filter_id}/snooze", response_class=HTMLResponse)
+async def snooze_popover(
+    request: Request, filter_id: int
+) -> HTMLResponse:
+    """Return the snooze-duration popover partial."""
+    return templates.TemplateResponse(
+        request, "filters/_snooze_popover.html", {"filter_id": filter_id}
+    )
+
+
+@router.post("/filters/{filter_id}/snooze", response_class=HTMLResponse)
+async def snooze_view(
+    request: Request,
+    filter_id: int,
+    duration: str = Form("7d"),
+    session: AsyncSession = Depends(get_session),
+) -> HTMLResponse:
+    try:
+        row = await snooze_filter(session, filter_id, duration)
+    except FilterNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc),
+        ) from exc
+    return templates.TemplateResponse(request, "filters/_row.html", {"f": row})
+
+
+@router.post("/filters/{filter_id}/resume", response_class=HTMLResponse)
+async def resume_view(
+    request: Request,
+    filter_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> HTMLResponse:
+    try:
+        row = await resume_filter(session, filter_id)
+    except FilterNotFound as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
+    return templates.TemplateResponse(request, "filters/_row.html", {"f": row})
