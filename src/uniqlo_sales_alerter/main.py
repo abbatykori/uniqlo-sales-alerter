@@ -360,6 +360,15 @@ app.include_router(saved_filters_router)
 app.include_router(parsers_router)
 app.include_router(ui_router)
 
+# Mount /static for the design-token CSS and any vendored assets (Phosphor SVGs).
+from pathlib import Path as _Path  # noqa: E402
+
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+_STATIC_DIR = _Path(__file__).parent / "ui" / "static"
+if _STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request) -> HTMLResponse:

@@ -51,6 +51,8 @@ where = ["src"]
 "uniqlo_sales_alerter.ui" = [
     "templates/*.html",
     "templates/**/*.html",
+    "static/*.css",
+    "static/**/*",
 ]
 "uniqlo_sales_alerter.notifications" = [
     "jinja_templates/*.j2",

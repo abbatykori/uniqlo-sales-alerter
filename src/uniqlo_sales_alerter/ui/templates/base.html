@@ -1,28 +1,93 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Saved filters — Uniqlo Sales Alerter{% endblock %}</title>
+    <title>{% block title %}Uniqlo Sales Alerter{% endblock %}</title>
+    <link rel="stylesheet" href="/static/tokens.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@2.0.3" integrity="sha384-0895/pl2MU10Hqc6jd4RvrthNlDiE9U1tWmX7WRESftEDRosgxNsQG/Ze9YMRzHq" crossorigin="anonymous"></script>
+    <script>
+      // Hook design-token CSS variables into Tailwind's theme palette so we
+      // can use classes like text-text-primary / bg-surface-canvas.
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              canvas:   'var(--color-surface-canvas)',
+              raised:   'var(--color-surface-raised)',
+              sunken:   'var(--color-surface-sunken)',
+              text: {
+                primary:   'var(--color-text-primary)',
+                secondary: 'var(--color-text-secondary)',
+                muted:     'var(--color-text-muted)',
+                inverse:   'var(--color-text-inverse)',
+              },
+              border: {
+                default: 'var(--color-border-default)',
+                strong:  'var(--color-border-strong)',
+              },
+              accent: {
+                DEFAULT: 'var(--color-accent-primary)',
+                muted:   'var(--color-accent-primary-muted)',
+              },
+              status: {
+                success: 'var(--color-status-success)',
+                warning: 'var(--color-status-warning)',
+                error:   'var(--color-status-error)',
+                info:    'var(--color-status-info)',
+              },
+            },
+            borderRadius: {
+              card: 'var(--radius-md)',
+              pill: 'var(--radius-full)',
+            },
+            fontFamily: {
+              serif: ['"Noto Serif"', 'ui-serif', 'Georgia', 'serif'],
+              sans:  ['"Noto Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+              mono:  ['"Noto Sans Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600&family=Noto+Serif:wght@400;500;700&family=Noto+Sans+Mono&display=swap" rel="stylesheet">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 64rem; margin: 2rem auto; padding: 0 1rem; }
-        h1, h2, h3 { font-weight: 500; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; }
-        .actions { display: flex; gap: 0.5rem; }
-        form .row { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem; }
-        input, select, button { font-size: 1rem; padding: 0.4rem 0.6rem; }
-        .errors { color: #a14040; padding: 0.5rem 0; }
-        .muted { color: #6b7280; font-size: 0.85em; }
+      body { font-family: 'Noto Sans', ui-sans-serif, system-ui, sans-serif; background: var(--color-surface-canvas); color: var(--color-text-primary); }
+      h1, h2, h3 { font-family: 'Noto Serif', ui-serif, Georgia, serif; }
     </style>
 </head>
-<body>
-    <header>
-        <p class="muted">Internal saved-filter editor (fork foundation). Not linked from /settings.</p>
-    </header>
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+<body class="min-h-full">
+    <div class="flex min-h-screen flex-col md:flex-row">
+        {# Desktop sidebar #}
+        <aside class="hidden md:flex md:w-56 md:flex-col md:border-r md:border-border-default md:bg-raised md:px-4 md:py-6">
+            <a href="/ui/" class="font-serif text-lg font-medium text-text-primary mb-6">Uniqlo Alerter</a>
+            <nav class="flex flex-col gap-1 text-sm">
+                <a href="/ui/" class="rounded px-3 py-2 hover:bg-sunken">Deals</a>
+                <a href="/ui/filters" class="rounded px-3 py-2 hover:bg-sunken">Filters</a>
+                <a href="/ui/inbox" class="rounded px-3 py-2 hover:bg-sunken">Inbox</a>
+                <a href="/ui/insights" class="rounded px-3 py-2 hover:bg-sunken">Insights</a>
+                <hr class="my-2 border-border-default">
+                <a href="/settings" class="rounded px-3 py-2 hover:bg-sunken text-text-secondary">Settings</a>
+                <a href="/ui/help" class="rounded px-3 py-2 hover:bg-sunken text-text-secondary">Help</a>
+            </nav>
+        </aside>
+
+        {# Main content #}
+        <main class="flex-1 px-4 py-6 md:px-8 md:py-8 pb-24 md:pb-8">
+            {% block content %}{% endblock %}
+        </main>
+
+        {# Mobile bottom tab bar #}
+        <nav class="md:hidden fixed bottom-0 inset-x-0 z-10 border-t border-border-default bg-raised flex justify-around text-xs text-text-secondary">
+            <a href="/ui/" class="flex-1 py-3 text-center">Deals</a>
+            <a href="/ui/filters" class="flex-1 py-3 text-center">Filters</a>
+            <a href="/ui/inbox" class="flex-1 py-3 text-center">Inbox</a>
+            <a href="/ui/insights" class="flex-1 py-3 text-center">Insights</a>
+            <a href="/settings" class="flex-1 py-3 text-center">More</a>
+        </nav>
+    </div>
 </body>
 </html>
