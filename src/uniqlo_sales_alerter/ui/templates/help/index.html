@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Help — Uniqlo Sales Alerter{% endblock %}
+
+{% block content %}
+<header class="mb-6">
+    <h1 class="text-2xl font-serif">Help</h1>
+    <p class="text-text-secondary text-sm mt-1">Documentation organised by what you're trying to do.</p>
+</header>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl">
+    <a href="/ui/help/tutorials" class="rounded-card bg-raised border border-border-default p-5 hover:border-border-strong">
+        <h2 class="text-lg font-serif">Tutorials</h2>
+        <p class="text-sm text-text-secondary mt-1">Learn by following a sequence — first filter, first deal, first snooze.</p>
+    </a>
+    <a href="/ui/help/how-to" class="rounded-card bg-raised border border-border-default p-5 hover:border-border-strong">
+        <h2 class="text-lg font-serif">How-to</h2>
+        <p class="text-sm text-text-secondary mt-1">Recipes for specific tasks: paste an invoice, set up Apprise, snooze a filter.</p>
+    </a>
+    <a href="/ui/help/reference" class="rounded-card bg-raised border border-border-default p-5 hover:border-border-strong">
+        <h2 class="text-lg font-serif">Reference</h2>
+        <p class="text-sm text-text-secondary mt-1">Config schema, size taxonomy, REST API surface.</p>
+    </a>
+    <a href="/ui/help/explanation" class="rounded-card bg-raised border border-border-default p-5 hover:border-border-strong">
+        <h2 class="text-lg font-serif">Explanation</h2>
+        <p class="text-sm text-text-secondary mt-1">How the matcher works. Why the heatmap matters. The Diataxis why.</p>
+    </a>
+</div>
+{% endblock %}

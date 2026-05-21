@@ -262,6 +262,120 @@ async def resume_view(
 _DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 
+async def _status_pill_context(request: Request) -> dict:
+    """Build the data feeding the global status pill in base.html."""
+    from datetime import datetime, timezone
+
+    from sqlalchemy import func, or_, select
+
+    from uniqlo_sales_alerter.db.engine import async_session_factory
+    from uniqlo_sales_alerter.db.models import SavedFilter
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    async with async_session_factory() as session:
+        active_stmt = (
+            select(func.count(SavedFilter.id))
+            .where(SavedFilter.enabled == 1)
+            .where(
+                or_(
+                    SavedFilter.snooze_until.is_(None),
+                    SavedFilter.snooze_until <= now,
+                )
+            )
+        )
+        snoozed_stmt = (
+            select(func.count(SavedFilter.id))
+            .where(SavedFilter.enabled == 1)
+            .where(SavedFilter.snooze_until.is_not(None))
+            .where(SavedFilter.snooze_until > now)
+        )
+        active = (await session.execute(active_stmt)).scalar_one()
+        snoozed = (await session.execute(snoozed_stmt)).scalar_one()
+
+    last_check_age = None
+    app_state = getattr(request.app.state, "app_state", None)
+    if app_state and app_state.last_check_at is not None:
+        last_at = app_state.last_check_at
+        if last_at.tzinfo is None:
+            last_at = last_at.replace(tzinfo=timezone.utc)
+        last_check_age = int((datetime.now(timezone.utc) - last_at).total_seconds())
+
+    return {
+        "active_filters": int(active),
+        "snoozed_filters": int(snoozed),
+        "last_check_age_seconds": last_check_age,
+    }
+
+
+@router.get("/status-pill", response_class=HTMLResponse)
+async def status_pill(request: Request) -> HTMLResponse:
+    """HTMX-polled status pill fragment for base.html."""
+    ctx = await _status_pill_context(request)
+    return templates.TemplateResponse(request, "_status_pill.html", ctx)
+
+
+@router.get("/", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
+async def deals_view(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> HTMLResponse:
+    """Default landing — deals grouped by saved filter."""
+    app_state = getattr(request.app.state, "app_state", None)
+    last_result = (
+        app_state.sale_checker.last_result if app_state is not None else None
+    )
+    filters = await list_filters(session)
+    names_by_id = {f.id: f.name for f in filters}
+
+    deals_by_filter: dict[int, list] = {}
+    untagged_watched: list = []
+    if last_result is not None:
+        for deal in last_result.matching_deals:
+            if not deal.matched_filter_ids and deal.is_watched:
+                untagged_watched.append(deal)
+            for fid in deal.matched_filter_ids:
+                deals_by_filter.setdefault(fid, []).append(deal)
+
+    return templates.TemplateResponse(
+        request, "deals.html",
+        {
+            "filters": filters,
+            "names_by_id": names_by_id,
+            "deals_by_filter": deals_by_filter,
+            "watched_only": untagged_watched,
+            "last_check_at": (
+                app_state.last_check_at if app_state is not None else None
+            ),
+        },
+    )
+
+
+@router.get("/inbox", response_class=HTMLResponse)
+async def inbox_view(request: Request) -> HTMLResponse:
+    """Notification history from the ``notification_log`` table."""
+    from sqlalchemy import select
+
+    from uniqlo_sales_alerter.db.engine import async_session_factory
+    from uniqlo_sales_alerter.db.models import NotificationLog
+
+    async with async_session_factory() as session:
+        rows = (
+            await session.execute(
+                select(NotificationLog).order_by(NotificationLog.sent_at.desc()).limit(50)
+            )
+        ).scalars().all()
+    return templates.TemplateResponse(
+        request, "inbox.html", {"rows": rows},
+    )
+
+
+@router.get("/help", response_class=HTMLResponse)
+async def help_index(request: Request) -> HTMLResponse:
+    """Diataxis index stub linking the four content categories."""
+    return templates.TemplateResponse(request, "help/index.html", {})
+
+
 @router.get("/filters/paste", response_class=HTMLResponse)
 async def paste_invoice_form(request: Request) -> HTMLResponse:
     """Render the invoice-paste textarea page."""

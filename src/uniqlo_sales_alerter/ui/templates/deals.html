@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Deals — Uniqlo Sales Alerter{% endblock %}
+
+{% block content %}
+<header class="mb-6">
+    <h1 class="text-2xl font-serif">Deals</h1>
+    <p class="text-text-secondary text-sm mt-1">
+        {% if last_check_at %}
+            Last check ran at <span class="font-mono text-xs">{{ last_check_at.strftime("%Y-%m-%d %H:%M UTC") }}</span>.
+        {% else %}
+            No check has run yet. Add a filter or wait for the scheduler.
+        {% endif %}
+    </p>
+</header>
+
+{% if not filters and not watched_only and not deals_by_filter %}
+    {# First-run empty state #}
+    <section class="rounded-card bg-raised border border-border-default p-8 text-center max-w-xl">
+        <h2 class="text-xl font-serif mb-3">Watch Uniqlo sales in your sizes</h2>
+        <p class="text-text-secondary mb-6">Create named saved filters describing what you're watching for. A deal matches if any of your filters does.</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href="/ui/filters/new" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-accent text-text-inverse font-medium">
+                Add my first filter
+            </a>
+            <a href="/ui/filters/paste" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-sunken text-text-primary">
+                Paste a recent invoice
+            </a>
+        </div>
+        <p class="mt-6 text-xs text-text-muted">
+            Or jump to <a href="/ui/help" class="underline">Help</a> for the wizard explainer.
+        </p>
+    </section>
+{% elif not deals_by_filter and not watched_only %}
+    {# Filters exist but nothing matched today #}
+    <section class="rounded-card bg-raised border border-border-default p-6 max-w-xl">
+        <h2 class="text-lg font-serif mb-2">Nothing matched today.</h2>
+        <p class="text-text-secondary text-sm">
+            Try adjusting a filter or
+            <a href="/ui/filters/paste" class="underline">paste a recent invoice</a>
+            to discover sizes.
+        </p>
+    </section>
+{% else %}
+    {# Sections by filter, plus untagged watched #}
+    <div class="flex flex-wrap gap-2 mb-6">
+        {% for f in filters if deals_by_filter.get(f.id) %}
+            <a href="#filter-{{ f.id }}" class="rounded-pill bg-accent-muted text-text-primary px-3 py-1 text-xs">
+                {{ f.name }} <span class="text-text-muted">({{ deals_by_filter[f.id]|length }})</span>
+            </a>
+        {% endfor %}
+        {% if watched_only %}
+            <a href="#watched" class="rounded-pill bg-status-success text-text-inverse px-3 py-1 text-xs">
+                Watched ({{ watched_only|length }})
+            </a>
+        {% endif %}
+    </div>
+
+    {% for f in filters %}
+        {% set deals = deals_by_filter.get(f.id, []) %}
+        {% if deals %}
+            <section id="filter-{{ f.id }}" class="mb-8">
+                <h2 class="text-lg font-serif mb-3">{{ f.name }}
+                    <span class="text-text-muted text-sm">({{ deals|length }})</span>
+                </h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for deal in deals %}
+                        {% include "_deal_card.html" %}
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+    {% endfor %}
+
+    {% if watched_only %}
+        <section id="watched" class="mb-8">
+            <h2 class="text-lg font-serif mb-3">Watched variants</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for deal in watched_only %}
+                    {% include "_deal_card.html" %}
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+{% endif %}
+{% endblock %}

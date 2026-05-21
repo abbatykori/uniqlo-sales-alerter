@@ -1,0 +1,15 @@
+{% if last_check_age_seconds is none %}
+    {% set check_label = "no check yet" %}
+{% elif last_check_age_seconds < 60 %}
+    {% set check_label = "just now" %}
+{% elif last_check_age_seconds < 3600 %}
+    {% set check_label = (last_check_age_seconds // 60) ~ " min ago" %}
+{% elif last_check_age_seconds < 86400 %}
+    {% set check_label = (last_check_age_seconds // 3600) ~ "h ago" %}
+{% else %}
+    {% set check_label = (last_check_age_seconds // 86400) ~ "d ago" %}
+{% endif %}
+<span class="inline-flex items-center gap-2 rounded-pill bg-raised border border-border-default px-3 py-1 text-xs text-text-secondary">
+    <span class="inline-block w-1.5 h-1.5 rounded-full bg-status-success"></span>
+    Last check: {{ check_label }} · {{ active_filters }} active · {{ snoozed_filters }} snoozed
+</span>

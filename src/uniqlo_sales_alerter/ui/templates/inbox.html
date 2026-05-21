@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Inbox — Uniqlo Sales Alerter{% endblock %}
+
+{% block content %}
+<header class="mb-6">
+    <h1 class="text-2xl font-serif">Inbox</h1>
+    <p class="text-text-secondary text-sm mt-1">Recent notification dispatches.</p>
+</header>
+
+{% if not rows %}
+    <section class="rounded-card bg-raised border border-border-default p-6 max-w-xl">
+        <p class="text-text-secondary text-sm">
+            Notifications will appear here once a check runs and matches something.
+        </p>
+    </section>
+{% else %}
+    <div class="rounded-card bg-raised border border-border-default overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-sunken text-text-secondary">
+                <tr>
+                    <th class="text-left px-4 py-2 font-medium">Sent</th>
+                    <th class="text-left px-4 py-2 font-medium">Channel</th>
+                    <th class="text-left px-4 py-2 font-medium">Filters</th>
+                    <th class="text-right px-4 py-2 font-medium">Deals</th>
+                    <th class="text-left px-4 py-2 font-medium">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr class="border-t border-border-default">
+                    <td class="px-4 py-2 font-mono text-xs">{{ row.sent_at.strftime("%Y-%m-%d %H:%M") }}</td>
+                    <td class="px-4 py-2">{{ row.channel }}</td>
+                    <td class="px-4 py-2 text-text-muted text-xs">{{ row.filter_ids | join(", ") }}</td>
+                    <td class="px-4 py-2 text-right">{{ row.deal_count }}</td>
+                    <td class="px-4 py-2">
+                        {% if row.status == "success" %}
+                            <span class="text-status-success">✓ success</span>
+                        {% else %}
+                            <span class="text-status-error">✗ {{ row.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endif %}
+{% endblock %}
