@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Insights — Uniqlo Sales Alerter{% endblock %}
+
+{% block content %}
+<h1>Insights</h1>
+<p class="muted">Deep-discount activity over the last {{ view.lookback_days }} days.</p>
+
+{% if not view.sufficient %}
+    <div style="background:#fffbe6;border:1px solid #facc15;padding:0.8rem 1rem;border-radius:6px;margin-bottom:1rem">
+        <strong>Heatmap will activate after 14 days of observations.</strong>
+        <div class="muted" style="margin-top:4px">Currently: {{ view.distinct_days }} day{{ 's' if view.distinct_days != 1 else '' }} of data.</div>
+    </div>
+{% endif %}
+
+<table style="border-collapse:collapse">
+    <thead>
+        <tr>
+            <th style="width:48px"></th>
+            {% for hour in range(24) %}
+                <th style="text-align:center;font-weight:400;color:#888;font-size:0.7em;padding:0 2px">{{ "%02d"|format(hour) }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for day_idx in range(7) %}
+        <tr>
+            <th style="text-align:right;font-weight:500;color:#666;padding-right:6px">{{ day_labels[day_idx] }}</th>
+            {% for hour in range(24) %}
+                {% set cell = view.cells[day_idx * 24 + hour] %}
+                <td title="{{ day_labels[day_idx] }} {{ '%02d:00'|format(hour) }} — {{ cell.count }} deep discount{{ 's' if cell.count != 1 else '' }}"
+                    style="width:20px;height:20px;border:1px solid #eee;background-color:rgba(194,165,109,{{ '%.2f'|format(cell.opacity) }})">
+                </td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p class="muted" style="margin-top:1rem;font-size:0.85em">
+    Light = fewer deep-discount drops, dark = more drops.
+    Max in window: {{ view.max_count }}.
+</p>
+{% endblock %}

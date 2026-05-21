@@ -21,7 +21,7 @@ from uniqlo_sales_alerter.api.saved_filters import router as saved_filters_route
 from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
 from uniqlo_sales_alerter.config import AppConfig, load_config, save_config
 from uniqlo_sales_alerter.db.engine import async_session_factory
-from uniqlo_sales_alerter.db.models import CheckHistory
+from uniqlo_sales_alerter.db.models import CheckHistory, DealObservation
 from uniqlo_sales_alerter.db.schema import ensure_schema
 from uniqlo_sales_alerter.models.products import SaleCheckResult
 from uniqlo_sales_alerter.notifications.dispatcher import NotificationDispatcher
@@ -79,6 +79,32 @@ async def _write_check_history(
     async with async_session_factory() as session:
         async with session.begin():
             session.add(row)
+
+
+async def _write_deal_observations(
+    result: SaleCheckResult, deep_threshold: int
+) -> None:
+    """Insert one ``deal_observations`` row per matched deal.
+
+    The heatmap aggregation in :mod:`services.heatmap` reads this table.
+    Failures here are non-fatal — the sale check has already succeeded.
+    """
+    if not result.matching_deals:
+        return
+    rows = [
+        DealObservation(
+            product_id=d.product_id,
+            discount_pct=d.discount_percentage if d.has_known_discount else None,
+            is_deep=int(d.has_known_discount and d.discount_percentage >= deep_threshold),
+        )
+        for d in result.matching_deals
+    ]
+    try:
+        async with async_session_factory() as session:
+            async with session.begin():
+                session.add_all(rows)
+    except Exception:
+        logger.exception("Failed to write deal_observations rows")
 
 
 async def _load_last_check_at() -> datetime | None:
@@ -140,6 +166,8 @@ async def run_sale_check(app_state: AppState) -> SaleCheckResult:
         raise
 
     finally:
+        if result is not None:
+            await _write_deal_observations(result, deep_threshold)
         duration_ms = int((monotonic() - started) * 1000)
         try:
             await _write_check_history(

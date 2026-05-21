@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from uniqlo_sales_alerter.api.schemas import SavedFilterCreate, SavedFilterUpdate
 from uniqlo_sales_alerter.db.engine import get_session
+from uniqlo_sales_alerter.services.heatmap import aggregate as aggregate_heatmap
 from uniqlo_sales_alerter.services.saved_filters import (
     DuplicateFilterName,
     FilterNotFound,
@@ -256,3 +257,23 @@ async def resume_view(
     except FilterNotFound as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND) from exc
     return templates.TemplateResponse(request, "filters/_row.html", {"f": row})
+
+
+_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+
+@router.get("/insights", response_class=HTMLResponse)
+async def insights_view(
+    request: Request,
+    lookback: int = 90,
+) -> HTMLResponse:
+    """Deal heatmap — 7 days × 24 hours grid of deep-discount counts."""
+    view = await aggregate_heatmap(lookback_days=lookback)
+    return templates.TemplateResponse(
+        request,
+        "insights.html",
+        {
+            "view": view,
+            "day_labels": _DAY_LABELS,
+        },
+    )
