@@ -76,6 +76,7 @@ _ENV_MAP: list[tuple[str, list[str], str]] = [
     ("DEEP_DISCOUNT_THRESHOLD",     ["deep_discount_threshold"],                 "int"),
     # -- notifications --
     ("NOTIFY_ON",                   ["notifications", "notify_on"],              "str"),
+    ("NOTIFICATIONS_APPRISE_URLS",  ["notifications", "apprise_urls"],           "list"),
     ("CHECK_ON_STARTUP",            ["notifications", "check_on_startup"],       "bool"),
     ("PREVIEW_CLI",                 ["notifications", "preview_cli"],            "bool"),
     ("PREVIEW_HTML",                ["notifications", "preview_html"],           "bool"),
@@ -356,6 +357,11 @@ class NotificationConfig(BaseModel):
     low_stock_threshold: int = Field(default=3, ge=0)
     suppress_low_stock_alerts: bool = False
     channels: ChannelsConfig = Field(default_factory=ChannelsConfig)
+    # Fork: list of Apprise URLs (https://github.com/caronc/apprise). Step 10's
+    # AppriseNotifier dispatches one HTML body to every URL in this list, in
+    # addition to URLs translated from the legacy ``channels.telegram``/
+    # ``channels.email`` blocks. PR-D removes the legacy notifiers entirely.
+    apprise_urls: list[str] = Field(default_factory=list)
 
 
 class QuietHoursConfig(BaseModel):

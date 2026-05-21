@@ -37,6 +37,8 @@ Foundation work for the [Abbaty fork](docs/specs/). Steps 1-9 of the build per `
 - **`/health` last-check freshness** — `last_check_age_seconds` populated from `app_state.last_check_at`; new `last_check_fresh` field flips to `false` and degrades the response to 503 when the most recent check is older than `2 × check_interval_minutes`. Naive timestamps (from SQLite) are coerced to UTC.
 - **`last_check_at` recovered from DB on boot** — lifespan startup queries the most recent `check_history.ran_at` so `/health` reports a meaningful freshness value immediately after a container restart.
 - **Daily `seen_variants` prune cron** — scheduler registers a `cron(hour=3, minute=15)` UTC job that calls `SeenVariantStore.prune_older_than(365)` to keep the table bounded. Runs even when `check_interval_minutes=0`.
+- **Apprise dependency + `AppriseNotifier` shell** — `apprise>=1.7,<2` added; new `notifications/apprise_notifier.py` accepts a list of Apprise URLs, dispatches via `asyncio.to_thread`, and persists one `notification_log` row per send (success or failure) with the aggregated `matched_filter_ids` across the deal batch. Body rendering is placeholder text in this step; PR-C replaces with Jinja templates surfacing per-filter chips. Registered alongside the legacy four notifiers until PR-D removes them.
+- **`notifications.apprise_urls`** config field + `NOTIFICATIONS_APPRISE_URLS` (comma-separated) env var. When non-empty, the dispatcher registers an `AppriseNotifier`; when empty, no Apprise call happens.
 
 ### Changed
 

@@ -22,6 +22,7 @@ dependencies = [
     "babel>=2.16",
     "structlog>=24.1",
     "python-multipart>=0.0.20",
+    "apprise>=1.7,<2",
 ]
 
 [project.optional-dependencies]

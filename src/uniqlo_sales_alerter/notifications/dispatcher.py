@@ -6,6 +6,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from uniqlo_sales_alerter.models.products import SaleItem
+from uniqlo_sales_alerter.notifications.apprise_notifier import AppriseNotifier
 from uniqlo_sales_alerter.notifications.base import Notifier
 from uniqlo_sales_alerter.notifications.console import ConsoleNotifier
 from uniqlo_sales_alerter.notifications.email import EmailNotifier
@@ -87,6 +88,17 @@ class NotificationDispatcher:
                 ignored_keywords=keywords,
             ))
             logger.debug("Registered HtmlReportNotifier (preview_html)")
+
+        apprise_urls = list(notify_cfg.apprise_urls)
+        if apprise_urls:
+            notifiers.append(AppriseNotifier(
+                apprise_urls,
+                server_url=server_url,
+                low_stock_threshold=threshold,
+            ))
+            logger.debug(
+                "Registered AppriseNotifier (%d URL(s))", len(apprise_urls)
+            )
 
         return notifiers
 
