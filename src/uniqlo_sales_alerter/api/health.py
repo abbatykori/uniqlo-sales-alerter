@@ -12,6 +12,7 @@ Any non-``None`` field that is ``False`` flips the response to HTTP 503.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Request
@@ -31,6 +32,7 @@ class HealthStatus(BaseModel):
     db_writeable: bool | None
     scheduler_running: bool | None
     last_check_age_seconds: int | None
+    last_check_fresh: bool | None
     message: str
 
 
@@ -45,9 +47,21 @@ async def health(request: Request) -> JSONResponse:
         scheduler_running = bool(app_state.scheduler.running)
 
     db_writeable: bool | None = await health_probe()
-    last_check_age_seconds: int | None = None
 
-    checks = (db_writeable, scheduler_running, last_check_age_seconds)
+    last_check_age_seconds: int | None = None
+    last_check_fresh: bool | None = None
+    if app_state is not None and app_state.last_check_at is not None:
+        last_at = app_state.last_check_at
+        # SQLite stores naive datetimes; treat them as UTC for the age calc.
+        if last_at.tzinfo is None:
+            last_at = last_at.replace(tzinfo=timezone.utc)
+        age = int((datetime.now(timezone.utc) - last_at).total_seconds())
+        last_check_age_seconds = max(age, 0)
+        interval_minutes = app_state.config.uniqlo.check_interval_minutes
+        if interval_minutes > 0:
+            last_check_fresh = last_check_age_seconds <= 2 * interval_minutes * 60
+
+    checks = (db_writeable, scheduler_running, last_check_fresh)
     degraded = any(value is False for value in checks)
 
     body = HealthStatus(
@@ -55,6 +69,7 @@ async def health(request: Request) -> JSONResponse:
         db_writeable=db_writeable,
         scheduler_running=scheduler_running,
         last_check_age_seconds=last_check_age_seconds,
+        last_check_fresh=last_check_fresh,
         message=_("Degraded") if degraded else _("Healthy"),
     )
     return JSONResponse(

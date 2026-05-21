@@ -5,13 +5,15 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 from importlib.metadata import PackageNotFoundError, version
+from time import monotonic
 from typing import AsyncIterator
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from sqlalchemy import select
 
 from uniqlo_sales_alerter.api.health import router as health_router
 from uniqlo_sales_alerter.api.routes import _redact_secrets, actions_router, router
@@ -19,9 +21,11 @@ from uniqlo_sales_alerter.api.saved_filters import router as saved_filters_route
 from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
 from uniqlo_sales_alerter.config import AppConfig, load_config, save_config
 from uniqlo_sales_alerter.db.engine import async_session_factory
+from uniqlo_sales_alerter.db.models import CheckHistory
 from uniqlo_sales_alerter.db.schema import ensure_schema
 from uniqlo_sales_alerter.models.products import SaleCheckResult
 from uniqlo_sales_alerter.notifications.dispatcher import NotificationDispatcher
+from uniqlo_sales_alerter.secret import load_or_create_secret
 from uniqlo_sales_alerter.services.bridge_migration import ensure_bridge_migration
 from uniqlo_sales_alerter.services.enrichment import enrich_config
 from uniqlo_sales_alerter.services.sale_checker import SaleChecker
@@ -45,6 +49,49 @@ class AppState:
     dispatcher: NotificationDispatcher
     scheduler: AsyncIOScheduler = field(default_factory=AsyncIOScheduler)
     last_check_at: datetime | None = None
+    secret: str = ""
+
+
+def _is_deep(result: SaleCheckResult, threshold: int) -> int:
+    """Count deals matching the configured deep-discount threshold."""
+    return sum(
+        1
+        for d in result.matching_deals
+        if d.has_known_discount and d.discount_percentage >= threshold
+    )
+
+
+async def _write_check_history(
+    *,
+    duration_ms: int,
+    result: SaleCheckResult | None,
+    error: str | None,
+    deep_threshold: int,
+) -> None:
+    """Persist one row to ``check_history`` per :func:`run_sale_check` invocation."""
+    row = CheckHistory(
+        duration_ms=duration_ms,
+        deals_scanned=result.total_products_scanned if result else 0,
+        deals_matched=len(result.matching_deals) if result else 0,
+        deep_discounts=_is_deep(result, deep_threshold) if result else 0,
+        error=error,
+    )
+    async with async_session_factory() as session:
+        async with session.begin():
+            session.add(row)
+
+
+async def _load_last_check_at() -> datetime | None:
+    """Return the most recent ``check_history.ran_at`` (timezone-aware UTC)."""
+    async with async_session_factory() as session:
+        result = await session.execute(
+            select(CheckHistory.ran_at).order_by(CheckHistory.ran_at.desc()).limit(1)
+        )
+        row = result.scalar()
+    if row is None:
+        return None
+    # SQLite stores naive timestamps; treat them as UTC.
+    return row.replace(tzinfo=timezone.utc) if row.tzinfo is None else row
 
 
 def _in_quiet_hours(config: AppConfig) -> bool:
@@ -64,10 +111,14 @@ def _in_quiet_hours(config: AppConfig) -> bool:
 
 
 async def run_sale_check(app_state: AppState) -> SaleCheckResult:
-    """Execute a sale check and dispatch notifications."""
+    """Execute a sale check, persist a ``check_history`` row, and dispatch notifications."""
+    started = monotonic()
+    result: SaleCheckResult | None = None
+    error_text: str | None = None
+    deep_threshold = app_state.config.deep_discount_threshold
     try:
         result = await app_state.sale_checker.check()
-        app_state.last_check_at = datetime.now()
+        app_state.last_check_at = datetime.now(timezone.utc)
         logger.info(
             "Sale check complete — %d matching deals (%d new)",
             len(result.matching_deals),
@@ -83,9 +134,22 @@ async def run_sale_check(app_state: AppState) -> SaleCheckResult:
 
         return result
 
-    except Exception:
+    except Exception as exc:
+        error_text = f"{type(exc).__name__}: {exc}"
         logger.exception("Sale check failed")
         raise
+
+    finally:
+        duration_ms = int((monotonic() - started) * 1000)
+        try:
+            await _write_check_history(
+                duration_ms=duration_ms,
+                result=result,
+                error=error_text,
+                deep_threshold=deep_threshold,
+            )
+        except Exception:
+            logger.exception("Failed to write check_history row")
 
 
 def _add_check_job(app_state: AppState) -> None:
@@ -100,7 +164,7 @@ def _add_check_job(app_state: AppState) -> None:
         interval = app_state.config.uniqlo.check_interval_minutes
         if (
             app_state.last_check_at
-            and datetime.now() - app_state.last_check_at
+            and datetime.now(timezone.utc) - app_state.last_check_at
             < timedelta(minutes=interval * 0.8)
         ):
             logger.debug(
@@ -131,6 +195,20 @@ def _add_check_job(app_state: AppState) -> None:
         )
         logger.info("Scheduled fixed check at %s", check_time)
 
+    async def _prune_seen_variants() -> None:
+        try:
+            deleted = await app_state.sale_checker._state.prune_older_than(365)
+            logger.info("Pruned %d seen_variants rows older than 365 days", deleted)
+        except Exception:
+            logger.exception("Daily seen_variants prune failed")
+
+    app_state.scheduler.add_job(
+        _prune_seen_variants, "cron",
+        hour=3, minute=15,
+        id="prune_seen_variants",
+    )
+    logger.info("Daily seen_variants prune scheduled at 03:15 UTC")
+
 
 
 async def _try_enrich(config: AppConfig, client: UniqloClient) -> None:
@@ -159,6 +237,8 @@ async def reload_config(app: FastAPI) -> AppConfig:
         sale_checker=checker,
         dispatcher=dispatcher,
         scheduler=current.scheduler,
+        last_check_at=current.last_check_at,
+        secret=current.secret,
     )
 
     _add_check_job(app.state.app_state)
@@ -182,10 +262,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     await _run_bridge_migration(config)
 
+    secret = load_or_create_secret()
+    last_check_at = await _load_last_check_at()
+
     checker = SaleChecker(config)
     dispatcher = NotificationDispatcher(config)
     app.state.app_state = AppState(
-        config=config, sale_checker=checker, dispatcher=dispatcher,
+        config=config,
+        sale_checker=checker,
+        dispatcher=dispatcher,
+        last_check_at=last_check_at,
+        secret=secret,
     )
 
     await _try_enrich(config, checker.http_client)
