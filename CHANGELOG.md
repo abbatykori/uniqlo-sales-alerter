@@ -39,6 +39,14 @@ Foundation work for the [Abbaty fork](docs/specs/). Steps 1-9 of the build per `
 - **Daily `seen_variants` prune cron** — scheduler registers a `cron(hour=3, minute=15)` UTC job that calls `SeenVariantStore.prune_older_than(365)` to keep the table bounded. Runs even when `check_interval_minutes=0`.
 - **Apprise dependency + `AppriseNotifier` shell** — `apprise>=1.7,<2` added; new `notifications/apprise_notifier.py` accepts a list of Apprise URLs, dispatches via `asyncio.to_thread`, and persists one `notification_log` row per send (success or failure) with the aggregated `matched_filter_ids` across the deal batch. Body rendering is placeholder text in this step; PR-C replaces with Jinja templates surfacing per-filter chips. Registered alongside the legacy four notifiers until PR-D removes them.
 - **`notifications.apprise_urls`** config field + `NOTIFICATIONS_APPRISE_URLS` (comma-separated) env var. When non-empty, the dispatcher registers an `AppriseNotifier`; when empty, no Apprise call happens.
+- **Jinja templates for Apprise body rendering** — `notifications/templates.py` exposes `render_title`, `render_html`, `render_text`. Three Jinja files under `notifications/jinja_templates/`: `title.j2`, `email.html.j2`, `email.txt.j2`. The HTML body surfaces:
+  - **Matched-filter chips** — one rounded badge per filter name via `SELECT id, name FROM saved_filters WHERE id IN (...)` lookup; falls back to `#<id>` if a name is missing. Watched-only items (zero matched filters) render a "Watched" chip instead.
+  - **Watched badge** on the product name when `is_watched=True`.
+  - **Price line** — strikethrough+discount when known, "Sale" badge when discount unknown, plain price otherwise. Reuses `format_price` from `notifications/base.py`.
+  - **Per-size action row** — direct variant URLs with stock-suffix spans (low-stock pills in `#A14040` red).
+  - **Action links** (`Ignore`, `Watch <size>` / `Unwatch <size>`) when `server_url` is set; otherwise a one-line "Set server_url" hint.
+  - **HTML autoescape** enabled for `.html.j2` templates via a custom name-based selector that handles the `.j2` suffix correctly.
+- **`tool.setuptools.package-data`** extended to ship `notifications/jinja_templates/*.j2` with the wheel.
 
 ### Changed
 

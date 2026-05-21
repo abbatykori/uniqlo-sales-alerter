@@ -28,6 +28,11 @@ from sqlalchemy import select
 
 from uniqlo_sales_alerter.db.engine import async_session_factory
 from uniqlo_sales_alerter.db.models import NotificationLog, SavedFilter
+from uniqlo_sales_alerter.notifications.templates import (
+    render_html,
+    render_text,
+    render_title,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -63,9 +68,19 @@ class AppriseNotifier:
         filter_ids = sorted({fid for d in deals for fid in d.matched_filter_ids})
         names_by_id = await self._fetch_filter_names(filter_ids)
 
-        title = self._render_title(deals)
-        html_body = self._render_html(deals, names_by_id)
-        text_body = self._render_text(deals, names_by_id)
+        title = render_title(deals)
+        html_body = render_html(
+            deals,
+            names_by_id,
+            server_url=self._server_url,
+            low_stock_threshold=self._low_stock_threshold,
+        )
+        text_body = render_text(
+            deals,
+            names_by_id,
+            server_url=self._server_url,
+            low_stock_threshold=self._low_stock_threshold,
+        )
 
         success = await self._dispatch_via_apprise(title, html_body, text_body)
         await self._log_dispatch(deals, filter_ids, success)
@@ -121,41 +136,3 @@ class AppriseNotifier:
         except Exception:
             logger.exception("Failed to write notification_log row")
 
-    # --- Placeholder renderers (replaced by Jinja templates in PR-C) -----
-
-    def _render_title(self, deals: list["SaleItem"]) -> str:
-        count = len(deals)
-        return f"Uniqlo Sale Alert — {count} deal{'s' if count != 1 else ''}"
-
-    def _render_text(
-        self, deals: list["SaleItem"], names_by_id: dict[int, str]
-    ) -> str:
-        lines = [f"{len(deals)} deal(s) matched your filters:", ""]
-        for d in deals:
-            tags = self._tag_string(d, names_by_id)
-            lines.append(f"- {d.name} ({d.gender}) — {d.discount_percentage:.0f}% off{tags}")
-        return "\n".join(lines)
-
-    def _render_html(
-        self, deals: list["SaleItem"], names_by_id: dict[int, str]
-    ) -> str:
-        parts = [
-            "<html><body>",
-            f"<p>{len(deals)} deal(s) matched your filters:</p>",
-            "<ul>",
-        ]
-        for d in deals:
-            tags = self._tag_string(d, names_by_id)
-            parts.append(
-                f"<li>{d.name} ({d.gender}) — {d.discount_percentage:.0f}% off{tags}</li>"
-            )
-        parts.append("</ul></body></html>")
-        return "".join(parts)
-
-    def _tag_string(
-        self, deal: "SaleItem", names_by_id: dict[int, str]
-    ) -> str:
-        if deal.is_watched and not deal.matched_filter_ids:
-            return " [Watched]"
-        names = [names_by_id.get(i, f"#{i}") for i in deal.matched_filter_ids]
-        return f" [matches: {', '.join(names)}]" if names else ""

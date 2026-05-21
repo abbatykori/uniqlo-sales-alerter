@@ -1,0 +1,43 @@
+Uniqlo Sale Alert — {{ deals|length }} deal{% if deals|length != 1 %}s{% endif %}
+================================================================
+
+{% for v in deals %}
+{% set deal = v.deal %}
+{% set price = v.price %}
+{{ loop.index }}. {{ deal.name }}{% if deal.is_watched %} [WATCHED]{% endif %}
+{% if v.colors %}
+   Colour: {{ v.colors | join(' · ') }}
+{% endif %}
+{% if v.rating %}
+   {{ v.rating }}
+{% endif %}
+{% if price.show_strikethrough %}
+   Price: {{ price.original_text }} -> {{ price.sale_text }} ({{ price.discount_label }})
+{% elif price.show_sale_badge %}
+   Price: {{ price.sale_text }} (Sale)
+{% else %}
+   Price: {{ price.sale_text }}
+{% endif %}
+{% if v.matched_filter_names %}
+   Matches: {{ v.matched_filter_names | join(', ') }}
+{% endif %}
+   Sizes:
+{% for cell in v.size_cells %}
+{% if cell.is_low_stock %}
+     - {{ cell.label }} ({{ cell.stock_text }}, low stock) — {{ cell.url }}
+{% elif cell.stock_text %}
+     - {{ cell.label }} ({{ cell.stock_text }}) — {{ cell.url }}
+{% else %}
+     - {{ cell.label }} — {{ cell.url }}
+{% endif %}
+{% endfor %}
+{% if server_url and v.ignore_url %}
+   Ignore: {{ v.ignore_url }}
+{% endif %}
+
+{% endfor %}
+{% if server_url %}
+Settings: {{ server_url }}/settings
+{% else %}
+(Set server_url in settings to enable action buttons.)
+{% endif %}

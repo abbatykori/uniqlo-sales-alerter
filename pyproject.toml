@@ -52,6 +52,9 @@ where = ["src"]
     "templates/*.html",
     "templates/**/*.html",
 ]
+"uniqlo_sales_alerter.notifications" = [
+    "jinja_templates/*.j2",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
