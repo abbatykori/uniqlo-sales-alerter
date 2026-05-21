@@ -52,11 +52,13 @@ class AppriseNotifier:
         session_factory: "async_sessionmaker | None" = None,
         server_url: str = "",
         low_stock_threshold: int = 0,
+        secret: str = "",
     ) -> None:
         self._urls = [u for u in urls if u]
         self._session_factory = session_factory or async_session_factory
         self._server_url = server_url
         self._low_stock_threshold = low_stock_threshold
+        self._secret = secret
 
     def is_enabled(self) -> bool:
         return bool(self._urls)
@@ -74,12 +76,14 @@ class AppriseNotifier:
             names_by_id,
             server_url=self._server_url,
             low_stock_threshold=self._low_stock_threshold,
+            secret=self._secret,
         )
         text_body = render_text(
             deals,
             names_by_id,
             server_url=self._server_url,
             low_stock_threshold=self._low_stock_threshold,
+            secret=self._secret,
         )
 
         success = await self._dispatch_via_apprise(title, html_body, text_body)

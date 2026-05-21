@@ -231,7 +231,7 @@ async def reload_config(app: FastAPI) -> AppConfig:
     checker = SaleChecker(config)
     await _try_enrich(config, checker.http_client)
 
-    dispatcher = NotificationDispatcher(config)
+    dispatcher = NotificationDispatcher(config, secret=current.secret)
     app.state.app_state = AppState(
         config=config,
         sale_checker=checker,
@@ -266,7 +266,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     last_check_at = await _load_last_check_at()
 
     checker = SaleChecker(config)
-    dispatcher = NotificationDispatcher(config)
+    dispatcher = NotificationDispatcher(config, secret=secret)
     app.state.app_state = AppState(
         config=config,
         sale_checker=checker,

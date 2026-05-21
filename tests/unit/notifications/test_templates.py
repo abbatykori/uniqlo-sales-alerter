@@ -88,26 +88,62 @@ def test_html_low_stock_red_styling_appears() -> None:
     assert "#A14040" in html
 
 
-def test_html_includes_action_links_when_server_url_set() -> None:
+def test_html_includes_action_links_when_server_url_and_secret_set() -> None:
     deal = sample_deal(product_id="E001", available_sizes=["M"])
-    html = render_html([deal], {}, server_url="http://localhost:8000")
+    html = render_html(
+        [deal], {},
+        server_url="http://localhost:8000",
+        secret="test-secret-32-bytes-hex-pattern",
+    )
     assert "/actions/ignore/E001" in html
+    assert "sig=" in html  # signature embedded in the URL
     assert "Watch M" in html
+
+
+def test_html_hides_action_links_without_secret() -> None:
+    """Without a secret, action URLs cannot be safely signed; templates must omit them."""
+    deal = sample_deal(product_id="E001")
+    html = render_html([deal], {}, server_url="http://localhost:8000")
+    # Action chips suppressed (no signed URL possible)
+    assert "/actions/ignore/" not in html
+    # Watch/Unwatch buttons suppressed
+    assert ">Ignore<" not in html
+    # Footer Settings link still shown (server_url is set)
+    assert "/settings" in html
 
 
 def test_html_hides_action_links_without_server_url() -> None:
     deal = sample_deal(product_id="E001")
-    html = render_html([deal], {})
+    html = render_html([deal], {}, secret="some-secret")
     assert "/actions/ignore/" not in html
     assert "Set server_url" in html
 
 
 def test_html_unwatch_links_appear_for_watched_items() -> None:
     deal = sample_deal(product_id="E001", is_watched=True, available_sizes=["M"])
-    html = render_html([deal], {}, server_url="http://localhost:8000")
+    html = render_html(
+        [deal], {},
+        server_url="http://localhost:8000",
+        secret="test-secret-32-bytes-hex-pattern",
+    )
     assert "Unwatch M" in html
     # Should NOT also show a "Watch M" link when already watched
     assert "Watch M" not in html.replace("Unwatch M", "")
+
+
+def test_html_snooze_chips_present_for_matched_filters() -> None:
+    """Each matched filter id renders a row of 1d/7d/30d/forever snooze chips."""
+    deal = sample_deal(
+        product_id="E001", matched_filter_ids=[7],
+    )
+    html = render_html(
+        [deal], {7: "Me tops"},
+        server_url="http://localhost:8000",
+        secret="test-secret-32-bytes-hex-pattern",
+    )
+    assert "Snooze Me tops" in html
+    for label in ("1d", "7d", "30d", "forever"):
+        assert f">{label}</a>" in html
 
 
 def test_text_body_includes_filter_names_and_sizes() -> None:

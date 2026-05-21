@@ -25,8 +25,9 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader
 
+from uniqlo_sales_alerter.models.products import parse_variant_codes
+from uniqlo_sales_alerter.notifications.action_urls import sign_action
 from uniqlo_sales_alerter.notifications.base import (
-    DealActions,
     FormattedPrice,
     format_price,
     format_rating,
@@ -109,22 +110,103 @@ def _matched_names(
     return [names_by_id.get(fid, f"#{fid}") for fid in deal.matched_filter_ids]
 
 
+def _signed_action_urls(
+    deal: "SaleItem",
+    server_url: str,
+    secret: str,
+    matched_filter_ids: list[int],
+) -> dict:
+    """Build all signed action URLs for one deal.
+
+    Returns a dict with ``ignore_url``, ``watch_url_by_size``,
+    ``unwatch_url_by_size``, and ``snooze_urls_by_filter`` (mapping
+    filter_id → list[(label, url)] for 1d/7d/30d/forever). Empty when
+    *server_url* or *secret* is unset (no actionable URLs possible).
+    """
+    if not server_url or not secret:
+        return dict(
+            ignore_url="",
+            watch_url_by_size={},
+            unwatch_url_by_size={},
+            snooze_urls_by_filter={},
+        )
+
+    ignore_url = sign_action(
+        secret=secret,
+        base_url=server_url,
+        action="ignore",
+        path_arg=deal.product_id,
+        payload={"name": deal.name},
+    )
+
+    watch_url_by_size: dict[str, str] = {}
+    unwatch_url_by_size: dict[str, str] = {}
+    for size_label, product_url in zip(deal.available_sizes, deal.product_urls):
+        color, size_code = parse_variant_codes(product_url)
+        if deal.is_watched:
+            unwatch_url_by_size[size_label] = sign_action(
+                secret=secret,
+                base_url=server_url,
+                action="unwatch",
+                path_arg=deal.product_id,
+                payload={
+                    "name": deal.name,
+                    "color": color,
+                    "size": size_code,
+                },
+            )
+        else:
+            watch_url_by_size[size_label] = sign_action(
+                secret=secret,
+                base_url=server_url,
+                action="watch",
+                path_arg=deal.product_id,
+                payload={"name": deal.name, "url": product_url},
+            )
+
+    snooze_urls_by_filter: dict[int, list[tuple[str, str]]] = {}
+    for fid in matched_filter_ids:
+        per_filter = []
+        for label, duration in (
+            ("1d", "1d"),
+            ("7d", "7d"),
+            ("30d", "30d"),
+            ("forever", "forever"),
+        ):
+            url = sign_action(
+                secret=secret,
+                base_url=server_url,
+                action="snooze",
+                payload={"filter_id": str(fid), "duration": duration},
+            )
+            per_filter.append((label, url))
+        snooze_urls_by_filter[fid] = per_filter
+
+    return dict(
+        ignore_url=ignore_url,
+        watch_url_by_size=watch_url_by_size,
+        unwatch_url_by_size=unwatch_url_by_size,
+        snooze_urls_by_filter=snooze_urls_by_filter,
+    )
+
+
 def _build_view(
     deals: list["SaleItem"],
     names_by_id: dict[int, str],
     *,
     server_url: str,
     low_stock_threshold: int,
+    secret: str,
 ) -> list[dict]:
     """Pre-compute per-deal view objects to keep the templates dumb."""
     view = []
     for deal in deals:
-        actions = DealActions(deal, server_url)
         price: FormattedPrice = format_price(deal)
         rating = format_rating(deal)
         cells = _size_cells(deal, low_stock_threshold=low_stock_threshold)
-        watch_url_by_size = {label: url for label, url in actions.watch_urls}
-        unwatch_url_by_size = {label: url for label, url in actions.unwatch_urls}
+        actions = _signed_action_urls(
+            deal, server_url, secret, deal.matched_filter_ids
+        )
         view.append(
             dict(
                 deal=deal,
@@ -133,9 +215,7 @@ def _build_view(
                 colors=unique_colors(deal),
                 matched_filter_names=_matched_names(deal, names_by_id),
                 size_cells=cells,
-                ignore_url=actions.ignore_url,
-                watch_url_by_size=watch_url_by_size,
-                unwatch_url_by_size=unwatch_url_by_size,
+                **actions,
             )
         )
     return view
@@ -153,15 +233,19 @@ def render_html(
     *,
     server_url: str = "",
     low_stock_threshold: int = 0,
+    secret: str = "",
 ) -> str:
     view = _build_view(
         deals,
         names_by_id,
         server_url=server_url,
         low_stock_threshold=low_stock_threshold,
+        secret=secret,
     )
     template = _env().get_template("email.html.j2")
-    return template.render(deals=view, server_url=server_url)
+    return template.render(
+        deals=view, server_url=server_url, names_by_id=names_by_id,
+    )
 
 
 def render_text(
@@ -170,12 +254,14 @@ def render_text(
     *,
     server_url: str = "",
     low_stock_threshold: int = 0,
+    secret: str = "",
 ) -> str:
     view = _build_view(
         deals,
         names_by_id,
         server_url=server_url,
         low_stock_threshold=low_stock_threshold,
+        secret=secret,
     )
     template = _env().get_template("email.txt.j2")
     return template.render(deals=view, server_url=server_url)

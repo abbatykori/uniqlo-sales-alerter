@@ -150,7 +150,13 @@ class TestTriggerCheck:
 
 
 class TestUnwatchAction:
-    """The /actions/unwatch endpoint should filter by color+size when provided."""
+    """The /actions/unwatch endpoint should filter by color+size when provided.
+
+    Post-PR-11 every /actions/* URL must carry a valid HMAC ``sig`` + ``exp``.
+    Helper :func:`_signed_unwatch_url` builds one from the test app's secret.
+    """
+
+    _TEST_SECRET = "test-secret-for-action-urls-0123"
 
     def _set_watched(self, client: TestClient, variants: list[dict]) -> None:
         from uniqlo_sales_alerter.main import app
@@ -158,6 +164,28 @@ class TestUnwatchAction:
         app.state.app_state.config = AppConfig.model_validate({
             "filters": {"watched_variants": variants},
         })
+        app.state.app_state.secret = self._TEST_SECRET
+
+    def _signed_unwatch_url(
+        self, product_id: str, *, name: str = "Test",
+        color: str = "", size: str = "",
+    ) -> str:
+        from uniqlo_sales_alerter.notifications.action_urls import sign_action
+
+        payload = {"name": name}
+        if color:
+            payload["color"] = color
+        if size:
+            payload["size"] = size
+        full = sign_action(
+            secret=self._TEST_SECRET,
+            base_url="http://testserver",
+            action="unwatch",
+            path_arg=product_id,
+            payload=payload,
+        )
+        # Strip the base_url so TestClient treats it as a path.
+        return full.replace("http://testserver", "", 1)
 
     def test_unwatch_with_color_and_size_removes_only_matching(
         self, client: TestClient,
@@ -172,7 +200,7 @@ class TestUnwatchAction:
             new_callable=AsyncMock,
         ) as mock_save:
             resp = client.get(
-                "/actions/unwatch/E001?name=Test&color=09&size=002",
+                self._signed_unwatch_url("E001", color="09", size="002"),
                 follow_redirects=False,
             )
             assert resp.status_code == 200
@@ -197,7 +225,7 @@ class TestUnwatchAction:
             new_callable=AsyncMock,
         ) as mock_save:
             resp = client.get(
-                "/actions/unwatch/E001?name=Test",
+                self._signed_unwatch_url("E001"),
                 follow_redirects=False,
             )
             assert resp.status_code == 200
@@ -213,8 +241,17 @@ class TestUnwatchAction:
             {"id": "E001", "color": "09", "size": "002", "name": "Black M"},
         ])
         resp = client.get(
-            "/actions/unwatch/E001?name=Test&color=99&size=999",
+            self._signed_unwatch_url("E001", color="99", size="999"),
             follow_redirects=False,
         )
         assert resp.status_code == 200
         assert "not on your" in resp.text.lower() or "not watched" in resp.text.lower()
+
+    def test_unsigned_unwatch_url_rejected_with_403(self, client: TestClient):
+        """A URL with no HMAC signature must be refused."""
+        self._set_watched(client, [])
+        resp = client.get(
+            "/actions/unwatch/E001?name=Test",
+            follow_redirects=False,
+        )
+        assert resp.status_code == 403

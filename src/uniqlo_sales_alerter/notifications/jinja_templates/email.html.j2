@@ -97,6 +97,16 @@
                           {% endif %}{% endfor %}
                         {% endif %}
                       </div>
+                      {% if v.snooze_urls_by_filter %}
+                        {% for fid, snooze_urls in v.snooze_urls_by_filter.items() %}
+                          <div style="margin-top:6px;font-size:11px;color:#888;">
+                            Snooze {{ names_by_id.get(fid, '#' ~ fid) }}:
+                            {% for label, url in snooze_urls %}
+                              <a href="{{ url }}" style="color:#5a4520;text-decoration:none;margin-right:8px;">{{ label }}</a>
+                            {% endfor %}
+                          </div>
+                        {% endfor %}
+                      {% endif %}
                     {% endif %}
                   </td>
                 </tr>

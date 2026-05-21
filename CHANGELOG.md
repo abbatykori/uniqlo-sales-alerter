@@ -6,7 +6,7 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 ## Fork foundation — unreleased (Abbaty)
 
-Foundation work for the [Abbaty fork](docs/specs/). Steps 1-9 of the build per `docs/specs/00-handoff.md`. Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and HTMX UI, switches the matcher onto multi-saved-filter matching with per-filter snooze and availability_mode, and adds the observability + secret-bootstrap layer needed for HMAC action URLs (step 11) and the daily housekeeping cron. No version bump until the multi-arch ghcr.io release (step 17). The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
+Foundation work for the [Abbaty fork](docs/specs/). Steps 1-11 of the build per `docs/specs/00-handoff.md`. Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and HTMX UI, switches the matcher onto multi-saved-filter matching with per-filter snooze and availability_mode, adds the observability + secret-bootstrap layer plus the daily housekeeping cron, and wires HMAC-signed action URLs into notification chips so users can ignore/watch/unwatch/snooze straight from their inbox. No version bump until the multi-arch ghcr.io release (step 17). The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
 
 ### Added
 
@@ -48,6 +48,12 @@ Foundation work for the [Abbaty fork](docs/specs/). Steps 1-9 of the build per `
   - **HTML autoescape** enabled for `.html.j2` templates via a custom name-based selector that handles the `.j2` suffix correctly.
 - **`tool.setuptools.package-data`** extended to ship `notifications/jinja_templates/*.j2` with the wheel.
 - **`notifications/url_translation.py`** — `legacy_channels_to_apprise_urls(cfg)` translates the upstream-style `channels.telegram` block into `tgram://<bot_token>/<chat_id>` and `channels.email` into Apprise's `mailto://` syntax (with URL-encoded credentials, 587/465 ports implicit, custom ports included, multi-recipient comma-joined, `secure=yes/no` from `use_tls`). Disabled blocks contribute nothing.
+- **HMAC-signed action URLs (step 11)** — new `notifications/action_urls.py` with `sign_action()` and `verify_action()`. Signature is HMAC-SHA256 over the sorted canonical query string excluding `sig`; expiry is an integer Unix timestamp in the `exp` parameter (default TTL 30 days, configurable). Constant-time comparison via `hmac.compare_digest`. All `/actions/{ignore,watch,unwatch,snooze}` handlers require a valid signature; tampered URLs return **403**, expired URLs return **410 Gone**. The notification HTML body now embeds:
+  - `/actions/ignore/{product_id}?name=&exp=&sig=` chip
+  - `/actions/watch/{product_id}?name=&url=&exp=&sig=` per non-watched size
+  - `/actions/unwatch/{product_id}?name=&color=&size=&exp=&sig=` per watched size
+  - `/actions/snooze?filter_id=&duration={1d,7d,30d,forever}&exp=&sig=` per matched filter
+- **`/actions/snooze` handler** — new route that writes to `saved_filters.snooze_until`. `forever` uses a year-9999 sentinel so the matcher's `WHERE snooze_until IS NULL OR snooze_until <= now` query stays symmetric. Idempotent: re-clicking the same URL just refreshes the timestamp.
 
 ### Changed
 

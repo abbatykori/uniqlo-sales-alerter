@@ -9,6 +9,11 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from uniqlo_sales_alerter.models.products import SaleCheckResult, SaleItem
+from uniqlo_sales_alerter.notifications.action_urls import (
+    ActionURLExpired,
+    ActionURLInvalid,
+    verify_action,
+)
 
 router = APIRouter(prefix="/api/v1")
 actions_router = APIRouter(prefix="/actions")
@@ -17,6 +22,33 @@ actions_router = APIRouter(prefix="/actions")
 def _get_app_state(request: Request):
     """FastAPI dependency — extracts the application state set during lifespan."""
     return request.app.state.app_state
+
+
+def _verify_signed_request(request: Request, app_state) -> None:
+    """Verify the request's HMAC signature; raise HTTPException on failure.
+
+    Action URLs land in user inboxes and can be clicked weeks later. Each one
+    carries an ``exp`` Unix timestamp and a ``sig`` HMAC computed over the
+    canonical query string with the server's ALERTER_SECRET. Expired URLs
+    return 410 Gone with a friendly HTML page; invalid signatures return 403.
+    """
+    params = dict(request.query_params)
+    secret = getattr(app_state, "secret", "") or ""
+    try:
+        verify_action(secret=secret, query_params=params)
+    except ActionURLExpired as exc:
+        raise HTTPException(
+            status_code=410,
+            detail=(
+                "This action link has expired. Re-trigger a check or "
+                f"open /settings to manage the underlying item ({exc})."
+            ),
+        ) from exc
+    except ActionURLInvalid as exc:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Invalid action link: {exc}",
+        ) from exc
 
 _NO_RESULT = HTTPException(
     status_code=503, detail="No sale check has been run yet",
@@ -230,7 +262,8 @@ async def action_ignore(
     app_state=Depends(_get_app_state),
     name: str = Query(""),
 ) -> HTMLResponse:
-    """Add a product to the ignore list (browser-friendly)."""
+    """Add a product to the ignore list (browser-friendly, HMAC-signed)."""
+    _verify_signed_request(request, app_state)
     current = app_state.config
     pid_upper = product_id.upper()
     if any(p.id.upper() == pid_upper for p in current.filters.ignored_products):
@@ -276,6 +309,7 @@ async def action_unwatch(
     removed.  Without them, all watched variants for the product are
     removed (backward-compatible fallback).
     """
+    _verify_signed_request(request, app_state)
     current = app_state.config
     pid_upper = product_id.upper()
     before = len(current.filters.watched_variants)
@@ -323,7 +357,8 @@ async def action_watch(
     name: str = Query(""),
     url: str = Query(""),
 ) -> HTMLResponse:
-    """Add a variant to the watch list (browser-friendly)."""
+    """Add a variant to the watch list (browser-friendly, HMAC-signed)."""
+    _verify_signed_request(request, app_state)
     from uniqlo_sales_alerter.config import parse_uniqlo_url
 
     fields = parse_uniqlo_url(url) if url else {}
@@ -362,4 +397,70 @@ async def action_watch(
     return _action_page(
         "Variant watched",
         f"<b>{html.escape(name)}</b> has been added to your watch list.",
+    )
+
+
+_SNOOZE_DURATIONS: dict[str, int | None] = {
+    # value: days from now; None means "forever" → year-9999 sentinel
+    "1d": 1,
+    "7d": 7,
+    "30d": 30,
+    "forever": None,
+}
+
+
+@actions_router.get("/snooze")
+async def action_snooze(
+    request: Request,
+    app_state=Depends(_get_app_state),
+    filter_id: int = Query(..., ge=1),
+    duration: str = Query("7d"),
+) -> HTMLResponse:
+    """Snooze a saved filter by ID (browser-friendly, HMAC-signed).
+
+    ``duration`` is one of ``1d``, ``7d``, ``30d``, ``forever``. Idempotent:
+    re-applying the same snooze extends from now (a fresh 7d snooze means
+    7 days from this click). ``forever`` sets ``snooze_until`` to year 9999
+    so the matcher's ``WHERE snooze_until <= now`` query stays symmetric.
+    """
+    _verify_signed_request(request, app_state)
+
+    if duration not in _SNOOZE_DURATIONS:
+        return _action_page(
+            "Invalid snooze duration",
+            f"Unsupported duration <b>{html.escape(duration)}</b>. "
+            "Use 1d, 7d, 30d, or forever.",
+        )
+
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import select
+
+    from uniqlo_sales_alerter.db.engine import async_session_factory
+    from uniqlo_sales_alerter.db.models import SavedFilter
+
+    days = _SNOOZE_DURATIONS[duration]
+    if days is None:
+        snooze_until = datetime(9999, 12, 31, tzinfo=timezone.utc)
+    else:
+        snooze_until = datetime.now(timezone.utc) + timedelta(days=days)
+
+    async with async_session_factory() as session:
+        async with session.begin():
+            row = await session.scalar(
+                select(SavedFilter).where(SavedFilter.id == filter_id)
+            )
+            if row is None:
+                return _action_page(
+                    "Filter not found",
+                    f"No saved filter with ID <b>{filter_id}</b>.",
+                )
+            row.snooze_until = snooze_until.replace(tzinfo=None)
+            filter_name = row.name
+
+    label = "forever" if days is None else f"{days} day{'s' if days != 1 else ''}"
+    return _action_page(
+        "Filter snoozed",
+        f"<b>{html.escape(filter_name)}</b> is now snoozed for {label}. "
+        f"<a href='/ui/filters'>Manage filters</a>.",
     )

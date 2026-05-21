@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class NotificationDispatcher:
     """Routes deals to a single Apprise notifier covering all configured URLs."""
 
-    def __init__(self, config: AppConfig) -> None:
+    def __init__(self, config: AppConfig, *, secret: str = "") -> None:
         self._config = config
         urls = list(config.notifications.apprise_urls) + legacy_channels_to_apprise_urls(
             config.notifications,
@@ -45,6 +45,7 @@ class NotificationDispatcher:
             urls,
             server_url=config.full_server_url,
             low_stock_threshold=config.notifications.low_stock_threshold,
+            secret=secret,
         )
         logger.info(
             "NotificationDispatcher: %d Apprise URL(s) configured", len(urls)
