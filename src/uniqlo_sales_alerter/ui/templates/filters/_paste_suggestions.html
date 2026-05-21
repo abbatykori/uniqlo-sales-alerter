@@ -1,0 +1,61 @@
+{% if result is none %}
+    <p class="muted">No detectable sizes in the pasted text yet.</p>
+{% else %}
+    {% set total = result.clothing | length + result.pants | length + result.shoes | length + result.kids | length %}
+    {% if total == 0 and not result.one_size %}
+        <p class="muted">No sizes detected. The parser walks lines like
+            <code>&lt;COLOUR&gt;, &lt;SIZE&gt;</code> following a product header.
+            {% if result.unparsed_lines %}
+                Lines we couldn't categorise: <code>{{ result.unparsed_lines | join(", ") }}</code>
+            {% endif %}
+        </p>
+    {% else %}
+        <p><strong>Detected sizes:</strong></p>
+        {% if result.clothing %}
+            <div style="margin:6px 0">
+                <span class="muted">Clothing:</span>
+                {% for size in result.clothing %}
+                    <span class="chip" style="display:inline-block;padding:2px 8px;margin:2px;background:#E8DDC4;border-radius:9999px">{{ size }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if result.pants %}
+            <div style="margin:6px 0">
+                <span class="muted">Pants:</span>
+                {% for size in result.pants %}
+                    <span class="chip" style="display:inline-block;padding:2px 8px;margin:2px;background:#E8DDC4;border-radius:9999px">{{ size }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if result.shoes %}
+            <div style="margin:6px 0">
+                <span class="muted">Shoes:</span>
+                {% for size in result.shoes %}
+                    <span class="chip" style="display:inline-block;padding:2px 8px;margin:2px;background:#E8DDC4;border-radius:9999px">{{ size }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if result.kids %}
+            <div style="margin:6px 0">
+                <span class="muted">Kids:</span>
+                {% for size in result.kids %}
+                    <span class="chip" style="display:inline-block;padding:2px 8px;margin:2px;background:#E8DDC4;border-radius:9999px">{{ size }}</span>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {% if result.one_size %}
+            <div style="margin:6px 0">
+                <span class="muted">One-size items detected.</span>
+            </div>
+        {% endif %}
+
+        {% if result.colors %}
+            <p class="muted" style="font-size:0.85em;margin-top:1rem">Colours seen: {{ result.colors | join(", ") }}</p>
+        {% endif %}
+        {% if result.product_ids %}
+            <p class="muted" style="font-size:0.85em">Product IDs: <code>{{ result.product_ids | join(", ") }}</code></p>
+        {% endif %}
+
+        <p style="margin-top:1rem"><a href="/ui/filters/new">Create a new filter with these sizes →</a></p>
+    {% endif %}
+{% endif %}

@@ -16,6 +16,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy import select
 
 from uniqlo_sales_alerter.api.health import router as health_router
+from uniqlo_sales_alerter.api.parsers import router as parsers_router
 from uniqlo_sales_alerter.api.routes import _redact_secrets, actions_router, router
 from uniqlo_sales_alerter.api.saved_filters import router as saved_filters_router
 from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
@@ -344,6 +345,7 @@ app.include_router(health_router)
 app.include_router(router)
 app.include_router(actions_router)
 app.include_router(saved_filters_router)
+app.include_router(parsers_router)
 app.include_router(ui_router)
 
 

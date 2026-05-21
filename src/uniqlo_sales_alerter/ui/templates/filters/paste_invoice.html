@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Paste invoice — Uniqlo Sales Alerter{% endblock %}
+
+{% block content %}
+<h1>Paste invoice to extract sizes</h1>
+<p class="muted">Paste the body of a Uniqlo order email (or invoice). We'll detect the sizes and suggest them as chips you can copy into a saved filter.</p>
+
+<form hx-post="/ui/filters/paste"
+      hx-target="#paste-result"
+      hx-swap="innerHTML">
+    <div class="row">
+        <textarea name="text" rows="14" placeholder="Paste invoice text here..."
+                  style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.9em;"
+                  required></textarea>
+    </div>
+    <button type="submit">Detect sizes</button>
+    <a href="/ui/filters" style="margin-left:1rem">Cancel</a>
+</form>
+
+<div id="paste-result" style="margin-top:1.5rem"></div>
+{% endblock %}

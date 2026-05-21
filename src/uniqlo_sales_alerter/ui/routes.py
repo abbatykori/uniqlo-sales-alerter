@@ -262,6 +262,30 @@ async def resume_view(
 _DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 
 
+@router.get("/filters/paste", response_class=HTMLResponse)
+async def paste_invoice_form(request: Request) -> HTMLResponse:
+    """Render the invoice-paste textarea page."""
+    return templates.TemplateResponse(
+        request, "filters/paste_invoice.html", {"result": None}
+    )
+
+
+@router.post("/filters/paste", response_class=HTMLResponse)
+async def paste_invoice_parse(
+    request: Request,
+    text: str = Form(""),
+) -> HTMLResponse:
+    """Parse pasted text and return the chip-suggestion HTMX partial."""
+    from uniqlo_sales_alerter.parsers.invoice_paste import parse_invoice
+
+    result = parse_invoice(text) if text.strip() else None
+    return templates.TemplateResponse(
+        request,
+        "filters/_paste_suggestions.html",
+        {"result": result},
+    )
+
+
 @router.get("/insights", response_class=HTMLResponse)
 async def insights_view(
     request: Request,
