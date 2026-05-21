@@ -47,6 +47,7 @@ Foundation work for the [Abbaty fork](docs/specs/). Steps 1-9 of the build per `
   - **Action links** (`Ignore`, `Watch <size>` / `Unwatch <size>`) when `server_url` is set; otherwise a one-line "Set server_url" hint.
   - **HTML autoescape** enabled for `.html.j2` templates via a custom name-based selector that handles the `.j2` suffix correctly.
 - **`tool.setuptools.package-data`** extended to ship `notifications/jinja_templates/*.j2` with the wheel.
+- **`notifications/url_translation.py`** — `legacy_channels_to_apprise_urls(cfg)` translates the upstream-style `channels.telegram` block into `tgram://<bot_token>/<chat_id>` and `channels.email` into Apprise's `mailto://` syntax (with URL-encoded credentials, 587/465 ports implicit, custom ports included, multi-recipient comma-joined, `secure=yes/no` from `use_tls`). Disabled blocks contribute nothing.
 
 ### Changed
 
@@ -54,12 +55,19 @@ Foundation work for the [Abbaty fork](docs/specs/). Steps 1-9 of the build per `
 - **Legacy `/settings` filters editor** — now displays a yellow banner above the section: "These filters no longer drive matching. Manage active filters at `/ui/filters`. (Watched variants, ignored products, and ignored keywords below still apply.)" Watched and ignored controls on the page remain effective.
 - **`SaleChecker._apply_filters`** retained as a sync test-compat shim calling the legacy single-filter pipeline directly. Production goes through `SaleChecker._matcher.apply` in `check()`. New matcher behaviour is covered by `tests/unit/services/test_matcher*.py`.
 - **`docker-compose.yml`** no longer sets `STATE_FILE=...`. The JSON state file is gone.
+- **`NotificationDispatcher` collapsed to a single `AppriseNotifier`** — URLs come from `config.notifications.apprise_urls` concatenated with the translation of any enabled `channels.telegram` / `channels.email` blocks. `preview_cli` and `preview_html` config toggles are no-ops for the scheduled dispatch loop; the `--preview-cli` and `--preview-html` CLI flags still work via direct imports of `console.py` and `html_report.py`.
 
 ### Removed
 
 - **`.github/workflows/docker-publish.yml`** — upstream's Docker Hub publish workflow targeting `kequach/uniqlo-sales-alerter`. Replaced by ghcr.io publishing in step 17.
 - **`STATE_FILE` env var** and `.seen_variants.json` runtime file — state lives in the `seen_variants` SQLite table.
 - **`filters.apply_filters` call sites in `SaleChecker.check()`** — replaced by `self._matcher.apply(...)`. The function itself remains in `filters.py` for the test shim.
+- **`src/uniqlo_sales_alerter/notifications/telegram.py`** and **`email.py`** — the four-channel dispatch loop is gone. Telegram and SMTP delivery happen via Apprise's `tgram://` / `mailto://` adapters using the same upstream `channels.telegram` / `channels.email` config, translated at startup.
+- **`tests/test_notifications.py`** — 37 KB / ~110 tests covering the deleted channels. Replaced by:
+  - `tests/unit/notifications/test_apprise_notifier.py` — AppriseNotifier behaviour (PR-B)
+  - `tests/unit/notifications/test_templates.py` — Jinja rendering with matched-filter chips (PR-C)
+  - `tests/unit/notifications/test_url_translation.py` — legacy → Apprise URL translation (this PR)
+  - `tests/unit/notifications/test_dispatcher.py` — single-notifier dispatcher (this PR)
 
 ---
 

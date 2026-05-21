@@ -23,16 +23,20 @@ def test_env_var_overrides_via_comma_split(monkeypatch) -> None:
     assert overrides["notifications"]["apprise_urls"] == ["tgram://one", "ntfy://two"]
 
 
-def test_dispatcher_registers_apprise_notifier_only_when_urls_set() -> None:
-    from uniqlo_sales_alerter.notifications.apprise_notifier import AppriseNotifier
+def test_dispatcher_has_no_urls_when_config_empty() -> None:
     from uniqlo_sales_alerter.notifications.dispatcher import NotificationDispatcher
 
     empty = NotificationDispatcher(AppConfig())
-    assert not any(isinstance(n, AppriseNotifier) for n in empty._notifiers)
+    assert empty.urls == []
+    assert empty.notifier.is_enabled() is False
 
-    with_urls = NotificationDispatcher(
-        AppConfig.model_validate(
-            {"notifications": {"apprise_urls": ["json://localhost:1234"]}}
-        )
+
+def test_dispatcher_collects_explicit_apprise_urls() -> None:
+    from uniqlo_sales_alerter.notifications.dispatcher import NotificationDispatcher
+
+    cfg = AppConfig.model_validate(
+        {"notifications": {"apprise_urls": ["json://localhost:1234"]}}
     )
-    assert any(isinstance(n, AppriseNotifier) for n in with_urls._notifiers)
+    d = NotificationDispatcher(cfg)
+    assert d.urls == ["json://localhost:1234"]
+    assert d.notifier.is_enabled() is True

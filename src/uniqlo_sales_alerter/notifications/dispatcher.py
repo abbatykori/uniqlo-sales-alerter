@@ -1,4 +1,20 @@
-"""Notification dispatcher — routes alerts to all enabled channels."""
+"""Notification dispatcher — routes all alerts through a single AppriseNotifier.
+
+The pre-fork code maintained four hand-rolled notifiers (Telegram, Email,
+Console, HTML report) registered side by side. PR-D collapses them to one
+:class:`AppriseNotifier`. URLs come from two sources concatenated:
+
+1. ``config.notifications.apprise_urls`` — explicit Apprise URLs the user has
+   configured (~80 services supported).
+2. The legacy ``channels.telegram`` / ``channels.email`` blocks, translated by
+   :func:`legacy_channels_to_apprise_urls` into ``tgram://...`` / ``mailto://...``
+   so existing single-user installs keep working without manual reconfiguration.
+
+The ``preview_cli`` and ``preview_html`` config toggles are no-ops for the
+dispatch loop after PR-D. The legacy ``console.py`` and ``html_report.py``
+modules remain in the tree for the ``--preview-cli`` / ``--preview-html`` CLI
+flags in ``__main__.py`` only.
+"""
 
 from __future__ import annotations
 
@@ -7,123 +23,55 @@ from typing import TYPE_CHECKING
 
 from uniqlo_sales_alerter.models.products import SaleItem
 from uniqlo_sales_alerter.notifications.apprise_notifier import AppriseNotifier
-from uniqlo_sales_alerter.notifications.base import Notifier
-from uniqlo_sales_alerter.notifications.console import ConsoleNotifier
-from uniqlo_sales_alerter.notifications.email import EmailNotifier
-from uniqlo_sales_alerter.notifications.html_report import HtmlReportNotifier
-from uniqlo_sales_alerter.notifications.telegram import TelegramNotifier
+from uniqlo_sales_alerter.notifications.url_translation import (
+    legacy_channels_to_apprise_urls,
+)
 
 if TYPE_CHECKING:
-    from uniqlo_sales_alerter.config import AppConfig, EmailChannelConfig
+    from uniqlo_sales_alerter.config import AppConfig
 
 logger = logging.getLogger(__name__)
 
 
-def _log_email_disabled(cfg: EmailChannelConfig) -> None:
-    """Log why the email notifier is disabled."""
-    checks = [
-        (cfg.enabled, "enabled: false"),
-        (cfg.smtp_host, "smtp_host is empty"),
-        (cfg.from_address, "from_address is empty"),
-        (cfg.to_addresses, "to_addresses is empty"),
-    ]
-    reasons = [msg for ok, msg in checks if not ok]
-    logger.info("Email disabled because: %s", ", ".join(reasons))
-
-
 class NotificationDispatcher:
-    """Creates notifiers from config and dispatches deals to all enabled channels.
-
-    Failures in one channel are logged but never prevent other channels from
-    being tried.
-    """
+    """Routes deals to a single Apprise notifier covering all configured URLs."""
 
     def __init__(self, config: AppConfig) -> None:
         self._config = config
-        self._notifiers: list[Notifier] = self._build_notifiers(config)
-
-    @staticmethod
-    def _build_notifiers(config: AppConfig) -> list[Notifier]:
-        notify_cfg = config.notifications
-        channels = notify_cfg.channels
-        notifiers: list[Notifier] = []
-
-        server_url = config.full_server_url
-        threshold = notify_cfg.low_stock_threshold
-        keywords = config.filters.ignored_keywords
-
-        telegram = TelegramNotifier(
-            channels.telegram,
-            server_url=server_url,
-            low_stock_threshold=threshold,
-            ignored_keywords=keywords,
+        urls = list(config.notifications.apprise_urls) + legacy_channels_to_apprise_urls(
+            config.notifications,
         )
-        notifiers.append(telegram)
-        logger.debug("Registered TelegramNotifier (enabled=%s)", telegram.is_enabled())
-
-        email = EmailNotifier(
-            channels.email,
-            server_url=server_url,
-            low_stock_threshold=threshold,
-            ignored_keywords=keywords,
+        self._notifier = AppriseNotifier(
+            urls,
+            server_url=config.full_server_url,
+            low_stock_threshold=config.notifications.low_stock_threshold,
         )
-        notifiers.append(email)
-        logger.debug("Registered EmailNotifier (enabled=%s)", email.is_enabled())
-        if not email.is_enabled():
-            _log_email_disabled(channels.email)
+        logger.info(
+            "NotificationDispatcher: %d Apprise URL(s) configured", len(urls)
+        )
 
-        if notify_cfg.preview_cli:
-            notifiers.append(ConsoleNotifier(
-                enabled=True,
-                server_url=server_url,
-                low_stock_threshold=threshold,
-                ignored_keywords=keywords,
-            ))
-            logger.debug("Registered ConsoleNotifier (preview_cli)")
-        if notify_cfg.preview_html:
-            notifiers.append(HtmlReportNotifier(
-                enabled=True,
-                server_url=server_url,
-                low_stock_threshold=threshold,
-                ignored_keywords=keywords,
-            ))
-            logger.debug("Registered HtmlReportNotifier (preview_html)")
+    @property
+    def urls(self) -> list[str]:
+        """The full URL set the notifier will dispatch to."""
+        return list(self._notifier._urls)
 
-        apprise_urls = list(notify_cfg.apprise_urls)
-        if apprise_urls:
-            notifiers.append(AppriseNotifier(
-                apprise_urls,
-                server_url=server_url,
-                low_stock_threshold=threshold,
-            ))
-            logger.debug(
-                "Registered AppriseNotifier (%d URL(s))", len(apprise_urls)
-            )
-
-        return notifiers
-
-    def register(self, notifier: Notifier) -> None:
-        """Register an additional notification channel at runtime."""
-        self._notifiers.append(notifier)
+    @property
+    def notifier(self) -> AppriseNotifier:
+        return self._notifier
 
     async def dispatch(self, deals: list[SaleItem]) -> None:
-        """Send *deals* to every enabled notification channel."""
+        """Send *deals* via Apprise. No-op if no URLs are configured."""
         if not deals:
             logger.debug("No deals to dispatch — skipping")
             return
-
-        logger.debug(
-            "Dispatching %d deal(s) to %d registered channel(s)",
-            len(deals), len(self._notifiers),
-        )
-
-        for notifier in self._notifiers:
-            name = type(notifier).__name__
-            if not notifier.is_enabled():
-                logger.debug("%s — skipped (disabled)", name)
-                continue
-            try:
-                await notifier.send(deals)
-                logger.info("Sent %d deal(s) via %s", len(deals), name)
-            except Exception:
-                logger.exception("Notification channel %s failed", name)
+        if not self._notifier.is_enabled():
+            logger.info(
+                "No Apprise URLs configured — %d deal(s) not dispatched",
+                len(deals),
+            )
+            return
+        try:
+            await self._notifier.send(deals)
+            logger.info("Dispatched %d deal(s) via Apprise", len(deals))
+        except Exception:
+            logger.exception("Apprise dispatch failed")
