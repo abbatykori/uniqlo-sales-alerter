@@ -1,0 +1,69 @@
+{# Ignored products (by ID/URL) + ignored keywords (substring match). #}
+<div id="ignored-lists" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <section>
+        <h3 class="text-sm font-medium mb-2">Ignored products</h3>
+        <p class="text-text-muted text-xs mb-3">
+            Skip these product IDs from all results, regardless of colour/size.
+        </p>
+        {% if not ignored_products %}
+            <p class="text-text-muted text-sm">No products ignored.</p>
+        {% else %}
+            <div class="space-y-1">
+                {% for prod in ignored_products %}
+                    <div class="flex items-center gap-2 rounded border border-border-default bg-canvas px-3 py-1.5 text-sm">
+                        <code class="flex-1 text-xs font-mono">
+                            {{ prod.id }}{% if prod.name %} — {{ prod.name }}{% endif %}
+                        </code>
+                        <button type="button"
+                                hx-delete="/settings/ignored/products/{{ loop.index0 }}"
+                                hx-target="#ignored-lists"
+                                hx-swap="outerHTML"
+                                hx-confirm="Stop ignoring product {{ prod.id }}?"
+                                class="rounded bg-sunken px-2 py-1 text-xs text-status-error hover:bg-status-error hover:text-text-inverse"
+                                aria-label="Stop ignoring">
+                            ✕
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+
+    <section>
+        <h3 class="text-sm font-medium mb-2">Ignored keywords</h3>
+        <p class="text-text-muted text-xs mb-3">
+            Drop any deal whose name contains these substrings. Case-insensitive.
+        </p>
+        <form hx-post="/settings/ignored/keywords"
+              hx-target="#ignored-lists"
+              hx-swap="outerHTML"
+              class="flex gap-2 mb-3">
+            <input type="text" name="keyword" required
+                   placeholder="oversized, paisley, ..."
+                   class="flex-1 rounded border border-border-default px-3 py-1.5 text-sm focus:border-border-strong focus:outline-none">
+            <button type="submit"
+                    class="rounded bg-accent text-text-inverse text-sm px-3 py-1.5">
+                Add
+            </button>
+        </form>
+        {% if not ignored_keywords %}
+            <p class="text-text-muted text-sm">No keywords ignored.</p>
+        {% else %}
+            <div class="flex flex-wrap gap-1.5">
+                {% for kw in ignored_keywords %}
+                    <span class="inline-flex items-center gap-1 rounded-pill bg-sunken px-2.5 py-0.5 text-xs">
+                        {{ kw }}
+                        <button type="button"
+                                hx-delete="/settings/ignored/keywords/{{ loop.index0 }}"
+                                hx-target="#ignored-lists"
+                                hx-swap="outerHTML"
+                                class="text-status-error hover:underline"
+                                aria-label="Remove keyword {{ kw }}">
+                            ✕
+                        </button>
+                    </span>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </section>
+</div>

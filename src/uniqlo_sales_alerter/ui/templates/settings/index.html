@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Settings — Uniqlo Sales Alerter{% endblock %}
+
+{% block content %}
+{% with title="Settings", breadcrumbs=[("Home","/"),("Settings", None)],
+        subtitle="Notification channels, schedule, country, and tracked items." %}
+    {% include "_page_header.html" %}
+{% endwith %}
+
+<div class="max-w-3xl space-y-8">
+
+    {# ---------------- Notifications ---------------- #}
+    <section class="rounded-card bg-raised border border-border-default p-5">
+        <header class="mb-4">
+            <h2 class="text-lg font-serif">Notifications</h2>
+            <p class="text-text-secondary text-sm mt-1">
+                Apprise URLs for delivery. Supports ~80 services: Telegram, email, Pushover,
+                Discord, Slack, and more.
+                <a href="https://github.com/caronc/apprise#supported-notifications"
+                   target="_blank" rel="noopener" class="underline">Full list</a>.
+            </p>
+        </header>
+
+        {% include "settings/_apprise_list.html" %}
+
+        <form hx-post="/settings/apprise"
+              hx-target="#apprise-list"
+              hx-swap="outerHTML"
+              class="mt-4 flex gap-2">
+            <input type="text" name="url" required
+                   placeholder="tgram://bottoken/chatid  or  mailto://user:pass@gmail.com"
+                   class="flex-1 rounded border border-border-default px-3 py-2 text-sm font-mono focus:border-border-strong focus:outline-none">
+            <button type="submit"
+                    class="rounded-card bg-accent text-text-inverse text-sm px-4 py-2">
+                Add URL
+            </button>
+        </form>
+        <p class="text-text-muted text-xs mt-2">
+            Tip: click <strong>Test</strong> next to any URL to send a synthetic deal through it.
+        </p>
+
+        <div id="apprise-test-result" class="mt-3"></div>
+    </section>
+
+    {# ---------------- Schedule ---------------- #}
+    <section class="rounded-card bg-raised border border-border-default p-5">
+        <header class="mb-4">
+            <h2 class="text-lg font-serif">Schedule</h2>
+            <p class="text-text-secondary text-sm mt-1">When to run the periodic sale checks.</p>
+        </header>
+
+        <form hx-post="/settings/schedule" hx-target="#schedule-status" hx-swap="innerHTML"
+              class="space-y-4">
+            <label class="block">
+                <span class="text-sm font-medium">Check every <strong>N</strong> minutes</span>
+                <input type="number" name="check_interval_minutes" min="0" max="1440" required
+                       value="{{ config.uniqlo.check_interval_minutes }}"
+                       class="mt-1 w-32 rounded border border-border-default px-3 py-1.5 text-sm focus:border-border-strong focus:outline-none">
+                <span class="ml-2 text-text-muted text-xs">Set to 0 to disable periodic checks.</span>
+            </label>
+
+            <label class="block">
+                <span class="text-sm font-medium">Fixed check times (HH:MM, comma-separated)</span>
+                <input type="text" name="scheduled_checks"
+                       value="{{ config.uniqlo.scheduled_checks | join(', ') }}"
+                       placeholder="08:00, 12:00, 18:00"
+                       class="mt-1 w-full rounded border border-border-default px-3 py-2 text-sm focus:border-border-strong focus:outline-none">
+            </label>
+
+            <fieldset class="border-t border-border-default pt-3 space-y-2">
+                <legend class="text-sm font-medium">Quiet hours</legend>
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="quiet_enabled" value="true"
+                           {% if config.quiet_hours.enabled %}checked{% endif %}>
+                    Pause checks and notifications during a daily window
+                </label>
+                <div class="flex items-center gap-2">
+                    <input type="time" name="quiet_start" value="{{ config.quiet_hours.start }}"
+                           class="rounded border border-border-default px-3 py-1.5 text-sm focus:border-border-strong focus:outline-none">
+                    <span class="text-text-muted text-xs">to</span>
+                    <input type="time" name="quiet_end" value="{{ config.quiet_hours.end }}"
+                           class="rounded border border-border-default px-3 py-1.5 text-sm focus:border-border-strong focus:outline-none">
+                </div>
+            </fieldset>
+
+            <div class="flex items-center gap-3">
+                <button type="submit"
+                        class="rounded-card bg-accent text-text-inverse text-sm px-4 py-2">
+                    Save schedule
+                </button>
+                <span id="schedule-status" class="text-sm"></span>
+            </div>
+        </form>
+    </section>
+
+    {# ---------------- Country ---------------- #}
+    <section class="rounded-card bg-raised border border-border-default p-5">
+        <header class="mb-4">
+            <h2 class="text-lg font-serif">Store country &amp; language</h2>
+            <p class="text-text-secondary text-sm mt-1">
+                Which Uniqlo storefront to track. The API hostname switches accordingly.
+            </p>
+        </header>
+
+        <form hx-post="/settings/country" hx-target="#country-status" hx-swap="innerHTML"
+              class="space-y-3">
+            <label class="block">
+                <span class="text-sm font-medium">Country</span>
+                <input type="text" name="store_country" required
+                       value="{{ config.store_country }}"
+                       placeholder="de, uk, us, jp, …"
+                       class="mt-1 w-32 rounded border border-border-default px-3 py-1.5 text-sm font-mono focus:border-border-strong focus:outline-none">
+                <span class="ml-2 text-text-muted text-xs">Two-letter ISO 3166 code.</span>
+            </label>
+
+            <label class="block">
+                <span class="text-sm font-medium">UI language</span>
+                <input type="text" name="ui_language"
+                       value="{{ config.ui_language or '' }}"
+                       placeholder="en, nl, de, …"
+                       class="mt-1 w-32 rounded border border-border-default px-3 py-1.5 text-sm font-mono focus:border-border-strong focus:outline-none">
+            </label>
+
+            <div class="flex items-center gap-3">
+                <button type="submit"
+                        class="rounded-card bg-accent text-text-inverse text-sm px-4 py-2">
+                    Save country
+                </button>
+                <span id="country-status" class="text-sm"></span>
+            </div>
+        </form>
+    </section>
+
+    {# ---------------- Watched variants ---------------- #}
+    <section class="rounded-card bg-raised border border-border-default p-5">
+        <header class="mb-4">
+            <h2 class="text-lg font-serif">Watched variants</h2>
+            <p class="text-text-secondary text-sm mt-1">
+                Specific colour+size combinations to always track, even outside your saved filters.
+            </p>
+        </header>
+
+        {% include "settings/_watched_list.html" %}
+
+        <form hx-post="/settings/watched"
+              hx-target="#watched-list"
+              hx-swap="outerHTML"
+              class="mt-4 flex gap-2">
+            <input type="url" name="url" required
+                   placeholder="https://www.uniqlo.com/eu/en/products/E123456-000/00?colorCode=00&sizeCode=04"
+                   class="flex-1 rounded border border-border-default px-3 py-2 text-sm focus:border-border-strong focus:outline-none">
+            <button type="submit"
+                    class="rounded-card bg-accent text-text-inverse text-sm px-4 py-2">
+                Watch
+            </button>
+        </form>
+    </section>
+
+    {# ---------------- Ignored lists ---------------- #}
+    <section class="rounded-card bg-raised border border-border-default p-5">
+        <header class="mb-4">
+            <h2 class="text-lg font-serif">Ignored items</h2>
+            <p class="text-text-secondary text-sm mt-1">
+                Suppress unwanted products from results.
+            </p>
+        </header>
+
+        {% include "settings/_ignored_lists.html" %}
+    </section>
+
+</div>
+{% endblock %}

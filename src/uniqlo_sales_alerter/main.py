@@ -11,13 +11,13 @@ from time import monotonic
 from typing import AsyncIterator
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
 from uniqlo_sales_alerter.api.health import router as health_router
 from uniqlo_sales_alerter.api.parsers import router as parsers_router
-from uniqlo_sales_alerter.api.routes import _redact_secrets, actions_router, router
+from uniqlo_sales_alerter.api.routes import actions_router, router
 from uniqlo_sales_alerter.api.saved_filters import router as saved_filters_router
 from uniqlo_sales_alerter.clients.uniqlo import UniqloClient
 from uniqlo_sales_alerter.config import AppConfig, load_config, save_config
@@ -31,7 +31,6 @@ from uniqlo_sales_alerter.services.bridge_migration import ensure_bridge_migrati
 from uniqlo_sales_alerter.services.enrichment import enrich_config
 from uniqlo_sales_alerter.services.sale_checker import SaleChecker
 from uniqlo_sales_alerter.services.upstream_migration import ensure_upstream_migration
-from uniqlo_sales_alerter.settings_ui import build_settings_page
 from uniqlo_sales_alerter.ui.routes import router as ui_router
 
 logging.basicConfig(
@@ -375,11 +374,3 @@ async def legacy_ui_redirect(path: str) -> RedirectResponse:
     """Permanent redirect from the v2.0 ``/ui/*`` paths to the new root-mounted UI."""
     target = f"/{path}" if path else "/"
     return RedirectResponse(url=target, status_code=308)
-
-
-@app.get("/settings", response_class=HTMLResponse)
-async def settings_page(request: Request) -> HTMLResponse:
-    """Serve the configuration web UI."""
-    app_state: AppState = request.app.state.app_state
-    config_data = _redact_secrets(app_state.config.model_dump())
-    return HTMLResponse(build_settings_page(config_data))

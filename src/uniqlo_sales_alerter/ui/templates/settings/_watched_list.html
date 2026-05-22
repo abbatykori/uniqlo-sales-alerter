@@ -1,0 +1,32 @@
+{# Watched variant list — read-only with a remove button. New ones are added
+   via the "Watch" action URL in notifications. #}
+<div id="watched-list" class="space-y-2">
+    {% if not watched %}
+        <p class="text-text-muted text-sm">
+            No watched variants. Click "Watch" on a deal notification to start tracking a specific product-colour-size combination.
+        </p>
+    {% else %}
+        {% for variant in watched %}
+            <div class="flex items-center gap-2 rounded border border-border-default bg-canvas px-3 py-2">
+                <div class="flex-1 text-sm">
+                    <div class="font-medium">
+                        {{ variant.name or "Product #" ~ variant.id }}
+                    </div>
+                    <div class="text-text-muted text-xs">
+                        {{ variant.color_name or variant.color }} ·
+                        {{ variant.size_name or variant.size }}
+                    </div>
+                </div>
+                <button type="button"
+                        hx-delete="/settings/watched/{{ loop.index0 }}"
+                        hx-target="#watched-list"
+                        hx-swap="outerHTML"
+                        hx-confirm="Stop watching this variant?"
+                        class="rounded bg-sunken px-2 py-1.5 text-xs text-status-error hover:bg-status-error hover:text-text-inverse"
+                        aria-label="Stop watching">
+                    ✕
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>

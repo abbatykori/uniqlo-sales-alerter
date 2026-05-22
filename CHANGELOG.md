@@ -16,6 +16,12 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 - **Snooze is a modal, not an inline popover.** The v2.0 popover overflowed the table and was unreadable on mobile. v2.1 opens a centered modal dialog with four large duration buttons (1d / 7d / 30d / forever), click-outside-to-dismiss, and auto-closes after picking a duration.
 - **Filter form replaced with toggle chips.** Gender, sizes (clothing / pants / shoes), and availability are now multi-select chip groups. Discount has quick-pick chips (30 / 50 / 70%). The "Enabled" checkbox is gone — a filter is active when it has at least one gender AND at least one size selected; the matcher derives this on save. Use a forever-snooze to temporarily disable a fully-configured filter.
 
+- **`/settings` rewritten in Tailwind, hosts the Apprise URL editor.** The v2.0 page was 1,308 lines of inline HTML with no Tailwind tokens; it was the only screen the user couldn't theme or extend. v2.1 replaces it with section cards for Notifications (Apprise URL CRUD + per-URL Test button), Schedule, Country/Language, Watched variants, and Ignored products/keywords. Every section is HTMX-driven — adds and removes update only the affected list without a full page reload.
+
+### Removed
+
+- **`src/uniqlo_sales_alerter/settings_ui.py`** (1,308 lines) — the legacy inline-HTML settings page. The Tailwind rewrite above replaces it.
+
 ### Behaviour notes
 
 - POSTing to `/api/v1/filters` with `enabled: true` but no gender or sizes now persists `enabled=false`. The service layer derives activity from data presence; the JSON API still accepts the field but it is informational only.

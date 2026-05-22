@@ -1,13 +1,7 @@
-"""HTMX-driven UI for the new saved filters.
+"""HTMX-driven UI: saved filters, deals/inbox/insights, settings.
 
-Hidden route — intentionally not linked from the legacy ``/settings`` page or
-any navigation. The legacy single-filter editor on ``/settings`` remains the
-authoritative editor while the matcher still consumes ``config.yaml::filters``.
-Step 8 swaps the matcher onto the SQLite-backed ``saved_filters`` table and
-exposes this UI in the nav at that point.
-
-Templates live under :data:`TEMPLATES_DIR`. Each form submission returns an
-HTML partial sized for HTMX swap, not JSON.
+Each route returns either a full page (extends ``base.html``) or an HTML
+partial sized for an HTMX swap. JSON is reserved for ``/api/v1``.
 """
 
 from __future__ import annotations
@@ -421,3 +415,263 @@ async def insights_view(
             "day_labels": _DAY_LABELS,
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Settings page — Apprise URLs, schedule, country, watched, ignored.
+# ---------------------------------------------------------------------------
+
+
+def _app_state(request: Request):
+    """Return the FastAPI app's mutable state holder."""
+    return request.app.state.app_state
+
+
+async def _persist_config(request: Request) -> None:
+    """Save the in-memory config to disk and reload the scheduler."""
+    from uniqlo_sales_alerter.config import save_config
+    from uniqlo_sales_alerter.main import reload_config
+
+    save_config(_app_state(request).config)
+    await reload_config(request.app)
+
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request) -> HTMLResponse:
+    """Tailwind-based settings page — replaces the v2.0 inline-HTML editor."""
+    state = _app_state(request)
+    config = state.config
+    return templates.TemplateResponse(
+        request,
+        "settings/index.html",
+        {
+            "config": config,
+            "apprise_urls": list(config.notifications.apprise_urls),
+            "watched": list(config.filters.watched_variants),
+            "ignored_products": list(config.filters.ignored_products),
+            "ignored_keywords": list(config.filters.ignored_keywords),
+        },
+    )
+
+
+# ---- Apprise URLs ---------------------------------------------------------
+
+
+@router.post("/settings/apprise", response_class=HTMLResponse)
+async def settings_apprise_add(
+    request: Request,
+    url: str = Form(...),
+) -> HTMLResponse:
+    """Append a new Apprise URL to the notification list."""
+    config = _app_state(request).config
+    cleaned = url.strip()
+    if cleaned and cleaned not in config.notifications.apprise_urls:
+        config.notifications.apprise_urls.append(cleaned)
+        await _persist_config(request)
+    return templates.TemplateResponse(
+        request,
+        "settings/_apprise_list.html",
+        {"apprise_urls": list(_app_state(request).config.notifications.apprise_urls)},
+    )
+
+
+@router.delete("/settings/apprise/{index}", response_class=HTMLResponse)
+async def settings_apprise_remove(request: Request, index: int) -> HTMLResponse:
+    """Remove an Apprise URL by list index."""
+    config = _app_state(request).config
+    if 0 <= index < len(config.notifications.apprise_urls):
+        config.notifications.apprise_urls.pop(index)
+        await _persist_config(request)
+    return templates.TemplateResponse(
+        request,
+        "settings/_apprise_list.html",
+        {"apprise_urls": list(_app_state(request).config.notifications.apprise_urls)},
+    )
+
+
+@router.post("/settings/apprise/{index}/test", response_class=HTMLResponse)
+async def settings_apprise_test(request: Request, index: int) -> HTMLResponse:
+    """Dispatch a synthetic test deal through one Apprise URL only."""
+    from uniqlo_sales_alerter.models.products import SaleItem
+    from uniqlo_sales_alerter.notifications.apprise_notifier import AppriseNotifier
+
+    config = _app_state(request).config
+    if not (0 <= index < len(config.notifications.apprise_urls)):
+        raise HTTPException(status_code=404, detail="Unknown Apprise URL")
+
+    target_url = config.notifications.apprise_urls[index]
+    test_deal = SaleItem(
+        product_id="0",
+        name="[TEST] Uniqlo Alerter test notification",
+        original_price=0.0,
+        sale_price=0.0,
+        currency_symbol="€",
+        discount_percentage=0.0,
+        gender="unisex",
+        available_sizes=["M"],
+        product_urls=[""],
+        matched_filter_ids=[-1],
+    )
+
+    notifier = AppriseNotifier(urls=[target_url])
+    try:
+        await notifier.send([test_deal])
+        message = "Test notification dispatched."
+        css_class = "text-status-success"
+    except Exception as exc:
+        message = f"Test failed: {exc}"
+        css_class = "text-status-error"
+    return HTMLResponse(
+        f'<p class="text-sm {css_class}">{message}</p>'
+    )
+
+
+# ---- Schedule / quiet hours ----------------------------------------------
+
+
+@router.post("/settings/schedule", response_class=HTMLResponse)
+async def settings_schedule_update(
+    request: Request,
+    check_interval_minutes: int = Form(...),
+    scheduled_checks: str = Form(""),
+    quiet_enabled: bool = Form(False),
+    quiet_start: str = Form("01:00"),
+    quiet_end: str = Form("08:00"),
+) -> HTMLResponse:
+    from pydantic import ValidationError
+
+    from uniqlo_sales_alerter.config import QuietHoursConfig
+
+    config = _app_state(request).config
+    try:
+        config.uniqlo.check_interval_minutes = max(0, int(check_interval_minutes))
+        config.uniqlo.scheduled_checks = [
+            t.strip() for t in scheduled_checks.split(",") if t.strip()
+        ]
+        config.quiet_hours = QuietHoursConfig(
+            enabled=quiet_enabled,
+            start=quiet_start,
+            end=quiet_end,
+        )
+        await _persist_config(request)
+    except (ValueError, ValidationError) as exc:
+        return HTMLResponse(
+            f'<span class="text-status-error">Save failed: {exc}</span>'
+        )
+    return HTMLResponse(
+        '<span class="text-status-success">Saved.</span>'
+    )
+
+
+# ---- Country / language --------------------------------------------------
+
+
+@router.post("/settings/country", response_class=HTMLResponse)
+async def settings_country_update(
+    request: Request,
+    store_country: str = Form(...),
+    ui_language: str = Form(""),
+) -> HTMLResponse:
+    config = _app_state(request).config
+    config.store_country = store_country.strip().lower()
+    config.ui_language = ui_language.strip().lower() or None
+    try:
+        await _persist_config(request)
+    except Exception as exc:
+        return HTMLResponse(
+            f'<span class="text-status-error">Save failed: {exc}</span>'
+        )
+    return HTMLResponse(
+        '<span class="text-status-success">Saved. Restart for full effect.</span>'
+    )
+
+
+# ---- Watched variants ----------------------------------------------------
+
+
+@router.post("/settings/watched", response_class=HTMLResponse)
+async def settings_watched_add(
+    request: Request,
+    url: str = Form(...),
+) -> HTMLResponse:
+    from pydantic import ValidationError
+
+    from uniqlo_sales_alerter.config import WatchedVariant
+
+    config = _app_state(request).config
+    try:
+        variant = WatchedVariant(url=url.strip())
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not variant.id:
+        raise HTTPException(status_code=400, detail="Could not parse product ID from URL")
+
+    config.filters.watched_variants.append(variant)
+    await _persist_config(request)
+    return templates.TemplateResponse(
+        request,
+        "settings/_watched_list.html",
+        {"watched": list(_app_state(request).config.filters.watched_variants)},
+    )
+
+
+@router.delete("/settings/watched/{index}", response_class=HTMLResponse)
+async def settings_watched_remove(request: Request, index: int) -> HTMLResponse:
+    config = _app_state(request).config
+    if 0 <= index < len(config.filters.watched_variants):
+        config.filters.watched_variants.pop(index)
+        await _persist_config(request)
+    return templates.TemplateResponse(
+        request,
+        "settings/_watched_list.html",
+        {"watched": list(_app_state(request).config.filters.watched_variants)},
+    )
+
+
+# ---- Ignored products & keywords -----------------------------------------
+
+
+def _render_ignored(request: Request) -> HTMLResponse:
+    config = _app_state(request).config
+    return templates.TemplateResponse(
+        request,
+        "settings/_ignored_lists.html",
+        {
+            "ignored_products": list(config.filters.ignored_products),
+            "ignored_keywords": list(config.filters.ignored_keywords),
+        },
+    )
+
+
+@router.delete("/settings/ignored/products/{index}", response_class=HTMLResponse)
+async def settings_ignored_product_remove(
+    request: Request, index: int
+) -> HTMLResponse:
+    config = _app_state(request).config
+    if 0 <= index < len(config.filters.ignored_products):
+        config.filters.ignored_products.pop(index)
+        await _persist_config(request)
+    return _render_ignored(request)
+
+
+@router.post("/settings/ignored/keywords", response_class=HTMLResponse)
+async def settings_ignored_keyword_add(
+    request: Request, keyword: str = Form(...),
+) -> HTMLResponse:
+    config = _app_state(request).config
+    cleaned = keyword.strip().lower()
+    if cleaned and cleaned not in [k.lower() for k in config.filters.ignored_keywords]:
+        config.filters.ignored_keywords.append(cleaned)
+        await _persist_config(request)
+    return _render_ignored(request)
+
+
+@router.delete("/settings/ignored/keywords/{index}", response_class=HTMLResponse)
+async def settings_ignored_keyword_remove(
+    request: Request, index: int
+) -> HTMLResponse:
+    config = _app_state(request).config
+    if 0 <= index < len(config.filters.ignored_keywords):
+        config.filters.ignored_keywords.pop(index)
+        await _persist_config(request)
+    return _render_ignored(request)

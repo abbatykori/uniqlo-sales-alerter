@@ -1,0 +1,30 @@
+{# Apprise URL list — add, remove, test individual URLs. #}
+<div id="apprise-list" class="space-y-2">
+    {% if not apprise_urls %}
+        <p class="text-text-muted text-sm">
+            No Apprise URLs configured. Add one below to start receiving notifications.
+        </p>
+    {% else %}
+        {% for url in apprise_urls %}
+            <div class="flex items-center gap-2 rounded border border-border-default bg-canvas px-3 py-2">
+                <code class="flex-1 text-xs font-mono text-text-secondary truncate" title="{{ url }}">{{ url }}</code>
+                <button type="button"
+                        hx-post="/settings/apprise/{{ loop.index0 }}/test"
+                        hx-target="#apprise-test-result"
+                        hx-swap="innerHTML"
+                        class="rounded bg-sunken px-3 py-1.5 text-xs font-medium hover:bg-accent-muted">
+                    Test
+                </button>
+                <button type="button"
+                        hx-delete="/settings/apprise/{{ loop.index0 }}"
+                        hx-target="#apprise-list"
+                        hx-swap="outerHTML"
+                        hx-confirm="Remove this Apprise URL?"
+                        class="rounded bg-sunken px-2 py-1.5 text-xs text-status-error hover:bg-status-error hover:text-text-inverse"
+                        aria-label="Remove">
+                    ✕
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
