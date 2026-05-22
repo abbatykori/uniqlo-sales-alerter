@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Reference — Help{% endblock %}
+
+{% block content %}
+<a href="/ui/help" class="text-text-secondary text-sm">&larr; Back to Help</a>
+<h1 class="text-2xl font-serif mt-2">Reference</h1>
+<p class="text-text-secondary text-sm mt-1">Schema and APIs.</p>
+
+<div class="mt-6 max-w-2xl text-sm space-y-6">
+    <section>
+        <h2 class="text-lg font-serif">Size taxonomy</h2>
+        <table class="mt-2 w-full">
+            <thead class="bg-sunken">
+                <tr><th class="text-left px-3 py-1.5 font-medium">Category</th><th class="text-left px-3 py-1.5 font-medium">Values</th></tr>
+            </thead>
+            <tbody class="bg-raised">
+                <tr class="border-t border-border-default"><td class="px-3 py-1.5">clothing</td><td class="px-3 py-1.5 font-mono text-xs">XXS, XS, S, M, L, XL, XXL, 3XL</td></tr>
+                <tr class="border-t border-border-default"><td class="px-3 py-1.5">pants</td><td class="px-3 py-1.5 font-mono text-xs">22inch … 40inch</td></tr>
+                <tr class="border-t border-border-default"><td class="px-3 py-1.5">shoes</td><td class="px-3 py-1.5 font-mono text-xs">37 … 43 with optional .5</td></tr>
+                <tr class="border-t border-border-default"><td class="px-3 py-1.5">kids</td><td class="px-3 py-1.5 font-mono text-xs">60cm … 180cm (or "5-6 Years (120cm)" form)</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-serif">REST endpoints</h2>
+        <ul class="mt-2 list-disc pl-6 space-y-1">
+            <li><code class="text-xs">/api/v1/filters</code> &nbsp;— CRUD; <code>/{id}/snooze?duration=…</code>, <code>/{id}/resume</code>, <code>/{id}/duplicate</code></li>
+            <li><code class="text-xs">/api/v1/parsers/invoice</code> &nbsp;— POST JSON {"text"}, returns categorised sizes</li>
+            <li><code class="text-xs">/api/v1/sales</code>, <code class="text-xs">/api/v1/sales/check</code>, <code class="text-xs">/api/v1/products/{id}</code></li>
+            <li><code class="text-xs">/api/v1/config</code> (PUT) &nbsp;— legacy single-filter config; ignored by the matcher post step 8</li>
+            <li><code class="text-xs">/actions/{ignore,watch,unwatch,snooze}</code> &nbsp;— HMAC-signed action URLs</li>
+            <li><code class="text-xs">/health</code> &nbsp;— scheduler / DB / freshness</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-serif">Config schema</h2>
+        <p class="mt-2">See <code>config.yaml</code> in the repo. Key keys: <code>store_country</code>, <code>ui_language</code>, <code>deep_discount_threshold</code>, <code>notifications.apprise_urls</code>. Env-var overrides for all: see README.</p>
+    </section>
+</div>
+{% endblock %}

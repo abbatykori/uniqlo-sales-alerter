@@ -1,88 +1,140 @@
 {% extends "base.html" %}
+{% block title %}
+{% if filter and filter.id %}Edit filter — Uniqlo Alerter{% else %}New filter — Uniqlo Alerter{% endif %}
+{% endblock %}
 
 {% block content %}
-<h1>{% if filter and filter.id %}Edit filter #{{ filter.id }}{% else %}New filter{% endif %}</h1>
+<header class="mb-6">
+    <h1 class="text-2xl font-serif">
+        {% if filter and filter.id %}Edit filter #{{ filter.id }}{% else %}New filter{% endif %}
+    </h1>
+    {% if not filter or not filter.id %}
+        <p class="text-text-secondary text-sm mt-1">
+            Name your filter, pick its sizes, and set the discount threshold.
+            Need to discover sizes?
+            <a class="underline" href="/ui/filters/paste">Paste an invoice.</a>
+        </p>
+    {% endif %}
+</header>
 
 {% if errors %}
-<p class="errors">{{ errors }}</p>
+<div class="rounded-card border border-status-error bg-raised p-3 mb-4 text-status-error text-sm">
+    {{ errors }}
+</div>
 {% endif %}
 
-<form method="post" action="{% if filter and filter.id %}/ui/filters/{{ filter.id }}{% else %}/ui/filters{% endif %}"
+<form class="max-w-2xl space-y-6"
+      method="post"
+      action="{% if filter and filter.id %}/ui/filters/{{ filter.id }}{% else %}/ui/filters{% endif %}"
       {% if filter and filter.id %}hx-put="/ui/filters/{{ filter.id }}"{% else %}hx-post="/ui/filters"{% endif %}>
-    <div class="row">
-        <label for="name">Name</label>
-        <input id="name" name="name" type="text" required
-               value="{{ filter.name if filter else '' }}">
-    </div>
 
-    <div class="row">
-        <label for="gender">Gender (comma-separated)</label>
-        <input id="gender" name="gender" type="text"
-               value="{{ filter.gender | join(', ') if filter else '' }}"
-               placeholder="men, women, unisex, kids, baby">
-    </div>
+    {# Step 1 — Name #}
+    <fieldset class="rounded-card bg-raised border border-border-default p-5">
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">1. Name</legend>
+        <label class="block mt-2">
+            <span class="text-sm font-medium">Filter name</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   id="name" name="name" type="text" required
+                   value="{{ filter.name if filter else '' }}"
+                   placeholder='e.g. "Me tops" or "Kid 5y"'>
+        </label>
+    </fieldset>
 
-    <div class="row">
-        <label for="min_discount">Minimum discount (%)</label>
-        <input id="min_discount" name="min_discount" type="number" step="0.1" min="0" max="100"
-               value="{{ filter.min_discount if filter else 0 }}">
-    </div>
+    {# Step 2 — Gender + sizes #}
+    <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-4">
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">2. Gender &amp; sizes</legend>
 
-    <div class="row">
-        <label for="sizes_clothing">Clothing sizes (comma-separated)</label>
-        <input id="sizes_clothing" name="sizes_clothing" type="text"
-               value="{{ filter.sizes_clothing | join(', ') if filter else '' }}"
-               placeholder="S, M, L, XL">
-    </div>
+        <label class="block">
+            <span class="text-sm font-medium">Gender (comma-separated)</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   id="gender" name="gender" type="text"
+                   value="{{ filter.gender | join(', ') if filter else '' }}"
+                   placeholder="men, women, unisex, kids, baby">
+        </label>
 
-    <div class="row">
-        <label for="sizes_pants">Pants sizes (comma-separated)</label>
-        <input id="sizes_pants" name="sizes_pants" type="text"
-               value="{{ filter.sizes_pants | join(', ') if filter else '' }}"
-               placeholder="32inch, 34inch">
-    </div>
+        <label class="block">
+            <span class="text-sm font-medium">Clothing sizes</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   name="sizes_clothing" type="text"
+                   value="{{ filter.sizes_clothing | join(', ') if filter else '' }}"
+                   placeholder="S, M, L, XL">
+        </label>
 
-    <div class="row">
-        <label for="sizes_shoes">Shoe sizes (comma-separated)</label>
-        <input id="sizes_shoes" name="sizes_shoes" type="text"
-               value="{{ filter.sizes_shoes | join(', ') if filter else '' }}">
-    </div>
+        <label class="block">
+            <span class="text-sm font-medium">Pants sizes</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   name="sizes_pants" type="text"
+                   value="{{ filter.sizes_pants | join(', ') if filter else '' }}"
+                   placeholder="32inch, 34inch">
+        </label>
 
-    <div class="row">
-        <label>
+        <label class="block">
+            <span class="text-sm font-medium">Shoe sizes</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   name="sizes_shoes" type="text"
+                   value="{{ filter.sizes_shoes | join(', ') if filter else '' }}"
+                   placeholder="42, 42.5">
+        </label>
+
+        <label class="flex items-center gap-2 text-sm">
             <input name="one_size_match" type="checkbox" value="true"
                    {% if filter and filter.one_size_match %}checked{% endif %}>
             Match one-size items (accessories, bags)
         </label>
-    </div>
 
-    <div class="row">
-        <label for="availability_mode">Availability</label>
-        <select id="availability_mode" name="availability_mode">
-            {% for option in ["both", "online", "in_store"] %}
-                <option value="{{ option }}"
-                        {% if filter and filter.availability_mode == option %}selected{% endif %}>
-                    {{ option }}
-                </option>
-            {% endfor %}
-        </select>
-    </div>
+        <p class="text-text-muted text-xs">
+            Don't know your sizes?
+            <a class="underline" href="/ui/filters/paste" target="_blank">Paste an invoice</a>
+            and we'll suggest them.
+        </p>
+    </fieldset>
 
-    <div class="row">
-        <label for="ignored_keywords">Ignored keywords (comma-separated)</label>
-        <input id="ignored_keywords" name="ignored_keywords" type="text"
-               value="{{ filter.ignored_keywords | join(', ') if filter else '' }}">
-    </div>
+    {# Step 3 — Discount + availability + review #}
+    <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-4">
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">3. Discount, availability, ignores</legend>
 
-    <div class="row">
-        <label>
+        <label class="block">
+            <span class="text-sm font-medium">Minimum discount (%)</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   name="min_discount" type="number" step="0.1" min="0" max="100"
+                   value="{{ filter.min_discount if filter else 0 }}">
+        </label>
+
+        <label class="block">
+            <span class="text-sm font-medium">Availability</span>
+            <select class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                    name="availability_mode">
+                {% for option in ["both", "online", "in_store"] %}
+                    <option value="{{ option }}"
+                            {% if filter and filter.availability_mode == option %}selected{% endif %}>
+                        {{ option }}
+                    </option>
+                {% endfor %}
+            </select>
+            <span class="block mt-1 text-text-muted text-xs">In-store items are not shippable. Useful if you regularly visit a Uniqlo.</span>
+        </label>
+
+        <label class="block">
+            <span class="text-sm font-medium">Ignored keywords (comma-separated)</span>
+            <input class="mt-1 w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
+                   name="ignored_keywords" type="text"
+                   value="{{ filter.ignored_keywords | join(', ') if filter else '' }}"
+                   placeholder="oversized, paisley">
+        </label>
+
+        <label class="flex items-center gap-2 text-sm">
             <input name="enabled" type="checkbox" value="true"
                    {% if not filter or filter.enabled %}checked{% endif %}>
             Enabled
         </label>
-    </div>
+    </fieldset>
 
-    <button type="submit">Save</button>
-    <a href="/ui/filters">Cancel</a>
+    <div class="flex items-center gap-3">
+        <button type="submit"
+                class="inline-flex items-center justify-center rounded-card bg-accent text-text-inverse font-medium px-4 py-2">
+            Save filter
+        </button>
+        <a href="/ui/filters" class="text-text-secondary text-sm">Cancel</a>
+    </div>
 </form>
 {% endblock %}

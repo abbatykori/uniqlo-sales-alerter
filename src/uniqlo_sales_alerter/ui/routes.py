@@ -376,6 +376,19 @@ async def help_index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "help/index.html", {})
 
 
+_HELP_SECTIONS = {"tutorials", "how-to", "reference", "explanation"}
+
+
+@router.get("/help/{section}", response_class=HTMLResponse)
+async def help_section(request: Request, section: str) -> HTMLResponse:
+    """Render one of the four Diataxis stub pages."""
+    if section not in _HELP_SECTIONS:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    return templates.TemplateResponse(
+        request, f"help/{section}.html", {"section": section}
+    )
+
+
 @router.get("/filters/paste", response_class=HTMLResponse)
 async def paste_invoice_form(request: Request) -> HTMLResponse:
     """Render the invoice-paste textarea page."""

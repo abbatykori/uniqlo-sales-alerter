@@ -1,31 +1,47 @@
 {% extends "base.html" %}
+{% block title %}Filters — Uniqlo Sales Alerter{% endblock %}
 
 {% block content %}
-<h1>Saved filters</h1>
-<p>
-    <a href="/ui/filters/new">Add filter</a>
-</p>
+<header class="flex items-baseline justify-between mb-6">
+    <h1 class="text-2xl font-serif">Filters</h1>
+    <a href="/ui/filters/new"
+       class="rounded-card bg-accent text-text-inverse text-sm px-3 py-2">
+        Add filter
+    </a>
+</header>
 
-{% if filters %}
-<table id="filters-table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Gender</th>
-            <th>Min discount</th>
-            <th>Availability</th>
-            <th>Enabled</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody id="filters-body">
-        {% for f in filters %}
-            {% include "filters/_row.html" %}
-        {% endfor %}
-    </tbody>
-</table>
+{% if not filters %}
+    <section class="rounded-card bg-raised border border-border-default p-6 max-w-xl">
+        <p class="text-text-secondary text-sm mb-3">No saved filters yet.</p>
+        <div class="flex gap-3">
+            <a href="/ui/filters/new" class="rounded-card bg-accent text-text-inverse text-sm px-3 py-2">
+                Add my first filter
+            </a>
+            <a href="/ui/filters/paste" class="rounded-card bg-sunken text-text-primary text-sm px-3 py-2">
+                Paste an invoice
+            </a>
+        </div>
+    </section>
 {% else %}
-<p class="muted">No saved filters yet. <a href="/ui/filters/new">Add your first one.</a></p>
+<div class="rounded-card bg-raised border border-border-default overflow-x-auto">
+    <table id="filters-table" class="w-full text-sm">
+        <thead class="bg-sunken text-text-secondary">
+            <tr>
+                <th class="text-left px-4 py-2 font-medium">ID</th>
+                <th class="text-left px-4 py-2 font-medium">Name</th>
+                <th class="text-left px-4 py-2 font-medium">Gender</th>
+                <th class="text-right px-4 py-2 font-medium">Min discount</th>
+                <th class="text-left px-4 py-2 font-medium">Availability</th>
+                <th class="text-left px-4 py-2 font-medium">Enabled</th>
+                <th class="text-left px-4 py-2 font-medium">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="filters-body">
+            {% for f in filters %}
+                {% include "filters/_row.html" %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endif %}
 {% endblock %}

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Tutorials — Help{% endblock %}
+
+{% block content %}
+<a href="/ui/help" class="text-text-secondary text-sm">&larr; Back to Help</a>
+<h1 class="text-2xl font-serif mt-2">Tutorials</h1>
+<p class="text-text-secondary text-sm mt-1">Learn by following a sequence.</p>
+
+<div class="prose mt-6 max-w-2xl">
+    <h2 class="text-lg font-serif mt-6">Add your first filter</h2>
+    <ol class="list-decimal pl-6 mt-2 space-y-2 text-sm">
+        <li>Open <a class="underline" href="/ui/filters/new">/ui/filters/new</a>.</li>
+        <li>Name it something memorable: "Me tops" or "Kid 5y" work well.</li>
+        <li>Set gender + sizes. Tip: <a class="underline" href="/ui/filters/paste">paste an invoice</a> to auto-detect.</li>
+        <li>Set min discount (e.g. 40%) and availability ("both" is fine to start).</li>
+        <li>Save. The next scheduled check will use your filter.</li>
+    </ol>
+
+    <h2 class="text-lg font-serif mt-8">Wire up notifications</h2>
+    <p class="text-sm mt-2">
+        Pick one or more Apprise URLs from <a class="underline" href="https://github.com/caronc/apprise">~80 supported services</a>.
+        Paste them into <code>config.yaml::notifications.apprise_urls</code> or set <code>NOTIFICATIONS_APPRISE_URLS</code>.
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Explanation — Help{% endblock %}
+
+{% block content %}
+<a href="/ui/help" class="text-text-secondary text-sm">&larr; Back to Help</a>
+<h1 class="text-2xl font-serif mt-2">Explanation</h1>
+<p class="text-text-secondary text-sm mt-1">How and why.</p>
+
+<div class="mt-6 max-w-2xl text-sm space-y-6">
+    <section>
+        <h2 class="text-lg font-serif">How matching works</h2>
+        <p class="mt-2">The matcher loads every enabled, non-snoozed saved filter from SQLite, then evaluates each product against every filter. A product matches a filter when its gender is in the filter's set (UNISEX always passes), the discount is at or above <code>min_discount</code>, at least one in-stock size matches one of the filter's size lists, and <code>availability_mode</code> agrees with the product's <code>storeStockOnly</code> flag. Per-filter <code>ignored_keywords</code> drop matches on substring presence in the product name.</p>
+        <p class="mt-2">Each emitted deal lists every filter that matched it in <code>matched_filter_ids</code>. Notifications surface those names as chips.</p>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-serif">How the heatmap works</h2>
+        <p class="mt-2">Each matched deal writes one row to <code>deal_observations</code> with <code>is_deep = 1</code> when discount meets the configured threshold. The 7×24 grid is a SQL <code>GROUP BY strftime('%w', observed_at), strftime('%H', observed_at)</code> over a rolling lookback (default 90 days). Opacity scales linearly with the cell's count relative to the max in the window. The grid stays hidden until 14 distinct days of data have accrued to avoid false "no deals on Tuesdays" signals.</p>
+    </section>
+
+    <section>
+        <h2 class="text-lg font-serif">Why saved filters (and not profiles)</h2>
+        <p class="mt-2">One household, one buyer, many sizes. "Me tops" + "Me bottoms" + "Kid 5y" + "Spouse" is the real shape. Profiles imply multi-user accounts; filters are just saved queries — leaner, no auth.</p>
+    </section>
+</div>
+{% endblock %}
