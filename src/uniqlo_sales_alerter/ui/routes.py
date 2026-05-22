@@ -219,12 +219,12 @@ async def delete_view(
 
 
 @router.get("/filters/{filter_id}/snooze", response_class=HTMLResponse)
-async def snooze_popover(
+async def snooze_modal(
     request: Request, filter_id: int
 ) -> HTMLResponse:
-    """Return the snooze-duration popover partial."""
+    """Return the snooze-duration modal partial swapped into ``#modal-content``."""
     return templates.TemplateResponse(
-        request, "filters/_snooze_popover.html", {"filter_id": filter_id}
+        request, "filters/_snooze_modal.html", {"filter_id": filter_id}
     )
 
 

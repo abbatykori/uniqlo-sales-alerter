@@ -79,7 +79,8 @@ def test_ui_snooze_post_returns_muted_row(client):
     r = client.post(f"/filters/{fid}/snooze", data={"duration": "1d"})
     assert r.status_code == 200
     assert "Snoozed until" in r.text
-    assert "opacity:0.55" in r.text
+    # v2.1 uses Tailwind opacity-70 instead of the inline opacity:0.55.
+    assert "opacity-70" in r.text
 
 
 def test_ui_snooze_forever_renders_indefinite_label(client):
@@ -94,8 +95,12 @@ def test_ui_resume_clears_snooze_state(client):
     client.post(f"/filters/{fid}/snooze", data={"duration": "7d"})
     r = client.post(f"/filters/{fid}/resume")
     assert r.status_code == 200
-    assert "Snoozed" not in r.text  # the snoozed sub-line is gone
-    assert "Resume now" not in r.text  # button text reverts to Snooze
+    # The "Snoozed until" sub-line is gone, but the new "Active" status pill
+    # may include the word "Snooze" as part of the Snooze action button text.
+    assert "Snoozed until" not in r.text
+    assert "Snoozed indefinitely" not in r.text
+    # Action button reverts to Snooze (not Resume).
+    assert "Resume" not in r.text
 
 
 def test_ui_unsnoozed_row_shows_snooze_button(client):

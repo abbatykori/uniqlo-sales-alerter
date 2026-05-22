@@ -1,44 +1,70 @@
 {% set is_snoozed = f.snooze_until is not none %}
-<tr id="filter-row-{{ f.id }}"{% if is_snoozed %} style="opacity:0.55;font-style:italic"{% endif %}>
-    <td>{{ f.id }}</td>
-    <td>
-        {{ f.name }}
+{% set is_forever = is_snoozed and f.snooze_until.year == 9999 %}
+<tr id="filter-row-{{ f.id }}" class="border-t border-border-default{% if is_snoozed %} opacity-70{% endif %}">
+    <td class="px-4 py-3 text-text-muted text-xs font-mono align-top">{{ f.id }}</td>
+    <td class="px-4 py-3 align-top">
+        <div class="font-medium">{{ f.name }}</div>
         {% if is_snoozed %}
-            {% if f.snooze_until.year == 9999 %}
-                <div class="muted" style="font-size:0.85em">Snoozed indefinitely.</div>
+            {% if is_forever %}
+                <div class="mt-1 text-text-muted text-xs">Snoozed indefinitely.</div>
             {% else %}
-                <div class="muted" style="font-size:0.85em">Snoozed until {{ f.snooze_until.strftime("%Y-%m-%d %H:%M") }} UTC.</div>
+                <div class="mt-1 text-text-muted text-xs">Snoozed until {{ f.snooze_until.strftime("%Y-%m-%d %H:%M") }} UTC.</div>
             {% endif %}
         {% endif %}
     </td>
-    <td>{{ f.gender | join(", ") }}</td>
-    <td>{{ "%.1f" | format(f.min_discount) }}%</td>
-    <td>{{ f.availability_mode }}</td>
-    <td>{{ "yes" if f.enabled else "no" }}</td>
-    <td class="actions">
-        <a href="/filters/{{ f.id }}/edit">Edit</a>
-        {% if is_snoozed %}
-            <button type="button"
-                    hx-post="/filters/{{ f.id }}/resume"
-                    hx-target="#filter-row-{{ f.id }}"
-                    hx-swap="outerHTML">
-                Resume now
-            </button>
+    <td class="px-4 py-3 align-top text-text-secondary text-sm">{{ f.gender | join(", ") }}</td>
+    <td class="px-4 py-3 align-top text-right text-sm">{{ "%.1f" | format(f.min_discount) }}%</td>
+    <td class="px-4 py-3 align-top text-text-secondary text-sm">{{ f.availability_mode }}</td>
+    <td class="px-4 py-3 align-top">
+        {% if not f.enabled %}
+            <span class="inline-flex items-center gap-1.5 text-xs text-text-muted">
+                <span class="w-2 h-2 rounded-full bg-text-muted"></span> Disabled
+            </span>
+        {% elif is_forever %}
+            <span class="inline-flex items-center gap-1.5 text-xs text-status-error">
+                <span class="w-2 h-2 rounded-full bg-status-error"></span> Forever snoozed
+            </span>
+        {% elif is_snoozed %}
+            <span class="inline-flex items-center gap-1.5 text-xs text-status-warning">
+                <span class="w-2 h-2 rounded-full bg-status-warning"></span> Snoozed
+            </span>
         {% else %}
-            <button type="button"
-                    hx-get="/filters/{{ f.id }}/snooze"
-                    hx-target="#snooze-popover-{{ f.id }}"
-                    hx-swap="innerHTML">
-                Snooze
-            </button>
-            <span id="snooze-popover-{{ f.id }}" style="display:inline"></span>
+            <span class="inline-flex items-center gap-1.5 text-xs text-status-success">
+                <span class="w-2 h-2 rounded-full bg-status-success"></span> Active
+            </span>
         {% endif %}
-        <button type="button"
-                hx-delete="/filters/{{ f.id }}"
-                hx-target="#filter-row-{{ f.id }}"
-                hx-swap="outerHTML"
-                hx-confirm="Delete filter '{{ f.name }}'?">
-            Delete
-        </button>
+    </td>
+    <td class="px-4 py-3 align-top">
+        <div class="flex flex-wrap gap-2">
+            <a href="/filters/{{ f.id }}/edit"
+               class="rounded bg-sunken px-3 py-1.5 text-xs font-medium hover:bg-accent-muted">
+                Edit
+            </a>
+            {% if is_snoozed %}
+                <button type="button"
+                        hx-post="/filters/{{ f.id }}/resume"
+                        hx-target="#filter-row-{{ f.id }}"
+                        hx-swap="outerHTML"
+                        class="rounded bg-sunken px-3 py-1.5 text-xs font-medium hover:bg-accent-muted">
+                    Resume
+                </button>
+            {% else %}
+                <button type="button"
+                        hx-get="/filters/{{ f.id }}/snooze"
+                        hx-target="#modal-content"
+                        hx-swap="innerHTML"
+                        class="rounded bg-sunken px-3 py-1.5 text-xs font-medium hover:bg-accent-muted">
+                    Snooze
+                </button>
+            {% endif %}
+            <button type="button"
+                    hx-delete="/filters/{{ f.id }}"
+                    hx-target="#filter-row-{{ f.id }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Delete filter '{{ f.name }}'?"
+                    class="rounded bg-sunken px-3 py-1.5 text-xs font-medium text-status-error hover:bg-status-error hover:text-text-inverse">
+                Delete
+            </button>
+        </div>
     </td>
 </tr>

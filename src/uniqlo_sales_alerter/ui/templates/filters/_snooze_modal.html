@@ -1,0 +1,31 @@
+{# Snooze modal — replaces the v2.0 inline popover that broke the filter table. #}
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+     onclick="if(event.target===this){document.getElementById('modal-content').innerHTML='';}">
+    <div class="rounded-card bg-raised border border-border-default shadow-lg max-w-md w-full p-6"
+         role="dialog" aria-modal="true" aria-labelledby="snooze-modal-title">
+        <header class="mb-4">
+            <h2 id="snooze-modal-title" class="text-lg font-serif">Snooze filter</h2>
+            <p class="text-text-secondary text-sm mt-1">Pick how long to pause notifications for this filter.</p>
+        </header>
+        <div class="grid grid-cols-2 gap-3">
+            {% for label, duration in [("1 day", "1d"), ("7 days", "7d"), ("30 days", "30d"), ("Forever", "forever")] %}
+                <button type="button"
+                        hx-post="/filters/{{ filter_id }}/snooze"
+                        hx-vals='{"duration": "{{ duration }}"}'
+                        hx-target="#filter-row-{{ filter_id }}"
+                        hx-swap="outerHTML"
+                        hx-on::after-request="document.getElementById('modal-content').innerHTML='';"
+                        class="rounded-card bg-sunken text-text-primary px-4 py-3 text-sm font-medium hover:bg-accent-muted">
+                    {{ label }}
+                </button>
+            {% endfor %}
+        </div>
+        <div class="mt-5 text-right">
+            <button type="button"
+                    onclick="document.getElementById('modal-content').innerHTML='';"
+                    class="text-text-secondary text-sm hover:underline">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>

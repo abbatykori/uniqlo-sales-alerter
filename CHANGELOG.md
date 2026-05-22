@@ -12,6 +12,8 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 - **Consistent page headers.** Every page renders the same breadcrumb + title pattern via a new `_page_header.html` partial. The paste-invoice screen is restyled to match the rest of the Tailwind UI.
 - **Deal cards are clickable.** The image and a new "View on Uniqlo →" CTA both open the first variant in a new tab. Size pills keep their direct deep-links.
 - **Price layout stacks vertically.** Strikethrough original price sits above the sale price + discount badge, so nothing wraps on narrow screens.
+- **Filter list polished.** Table cells get proper padding, action buttons are styled as buttons (not link text), and a new `Status` column surfaces snooze state as a coloured dot + label (active / snoozed / forever-snoozed / disabled).
+- **Snooze is a modal, not an inline popover.** The v2.0 popover overflowed the table and was unreadable on mobile. v2.1 opens a centered modal dialog with four large duration buttons (1d / 7d / 30d / forever), click-outside-to-dismiss, and auto-closes after picking a duration.
 
 ---
 

@@ -1,0 +1,7 @@
+{# Global modal container — HTMX swaps partial markup into #modal-content. #}
+<div id="modal" class="contents">
+    {# Modal partials render themselves with their own overlay/backdrop. The
+       container exists solely as a swap target so JS can clear it from any
+       button via document.getElementById('modal').innerHTML=''. #}
+    <div id="modal-content"></div>
+</div>
