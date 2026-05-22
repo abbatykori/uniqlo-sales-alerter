@@ -2,27 +2,43 @@
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB.svg)](https://www.python.org/downloads/)
-[![Docker](https://img.shields.io/badge/docker-hub-2496ED.svg)](https://hub.docker.com/r/kequach/uniqlo-sales-alerter)
+[![Container: ghcr.io](https://img.shields.io/badge/container-ghcr.io-181717.svg)](https://github.com/abbatykori/uniqlo-sales-alerter/pkgs/container/uniqlo-sales-alerter)
 
-A self-hosted server that monitors [Uniqlo](https://www.uniqlo.com) sales and sends you notifications when items match your criteria. It talks directly to Uniqlo's internal Commerce API.
+A self-hosted server that watches [Uniqlo](https://www.uniqlo.com)'s sale catalogue against your saved filters and notifies you when a match shows up. Talks directly to Uniqlo's Commerce API; no scraping. Mobile-first web UI, SQLite-backed state, ~80 supported notification services via [Apprise](https://github.com/caronc/apprise).
 
-Forked from [kequach/uniqlo-sales-alerter](https://github.com/kequach/uniqlo-sales-alerter). See [NOTICE](NOTICE) for attribution.
+Forked from [kequach/uniqlo-sales-alerter](https://github.com/kequach/uniqlo-sales-alerter). See [NOTICE](NOTICE).
 
 ## What's different from upstream
 
-This fork is mid-build. The headline differences planned for v1 (all "in progress" until called out):
+- **Named saved filters** replace the single global filter. One household, one buyer, many sizes: "Me tops" + "Me bottoms" + "Kid 5y" + "Spouse" matches the real shape.
+- **Apprise** replaces the four hand-rolled notification channels (Telegram + Email + Console + HTML preview). One URL list, ~80 services.
+- **Snooze per filter** (1d / 7d / 30d / forever), **deal heatmap** (7 × 24 grid of deep-discount drops), **invoice-paste size extraction**.
+- **HMAC-signed action URLs** in notifications: ignore / watch / unwatch / snooze from your inbox, valid for 30 days.
+- **SQLite + Alembic** for durable state. `.seen_variants.json` retired.
+- **HMTX + Tailwind + design tokens**, mobile bottom-tab + desktop sidebar, empty-state-first onboarding.
+- **Multi-arch Docker** (`amd64` + `arm64`) published to `ghcr.io/abbatykori/uniqlo-sales-alerter` on every `v*` tag.
+- **i18n architecture** with separated `store_country` and `ui_language`; English shipped, structured for translation PRs.
 
-- **Named saved filters** replace the single global filter (in progress)
-- **Apprise** replaces the four hand-rolled notification channels (in progress)
-- **Snooze per filter**, **deal heatmap**, and **invoice-paste size extraction** added (in progress)
-- **i18n architecture** with separated store country and UI language (in progress)
-- **SQLite + Alembic** replaces the JSON state file (in progress)
-- **Mobile-first UI** with empty-state-first onboarding (in progress)
-- **Multi-arch Docker images** published to ghcr.io (in progress)
+See [`docs/specs/`](docs/specs/) for the full design rationale.
 
-See `docs/specs/` for the full design.
+## Quick start (Docker)
 
-![Mail report](docs/img/mail.png)
+```bash
+docker run -d --name uniqlo-alerter \
+  -p 8000:8000 \
+  -v $(pwd)/data:/app/data \
+  -e STORE_COUNTRY=nl/nl \
+  -e NOTIFICATIONS_APPRISE_URLS="tgram://BOT_TOKEN/CHAT_ID" \
+  ghcr.io/abbatykori/uniqlo-sales-alerter:latest
+```
+
+Open <http://localhost:8000/ui/> for the Deals view. Add filters at `/ui/filters/new` or paste a Uniqlo order email at `/ui/filters/paste` to auto-detect your sizes.
+
+For the docker-compose form, copy [`docker-compose.yml`](docker-compose.yml). For Portainer one-click deploy, see [`deploy/`](deploy/).
+
+## Design
+
+Mobile-first, calm, restrained. Off-white canvas, warm-gold accent, Noto Serif headings + Noto Sans body. Tokens live in `design/tokens/tokens.json` (W3C Design Tokens Format). The full design brief is in [`docs/specs/02-design-brief.md`](docs/specs/02-design-brief.md).
 
 ## Table of Contents
 

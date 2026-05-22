@@ -1,7 +1,6 @@
 services:
   uniqlo-alerter:
-    # replaced with ghcr.io/<owner>/uniqlo-sales-alerter at step 17 of the fork build
-    image: kequach/uniqlo-sales-alerter:latest
+    image: ghcr.io/abbatykori/uniqlo-sales-alerter:latest
     container_name: uniqlo-alerter
     restart: unless-stopped
     ports:

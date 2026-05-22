@@ -1,0 +1,46 @@
+{
+  "version": "3",
+  "templates": [
+    {
+      "type": 1,
+      "title": "Uniqlo Sales Alerter (Abbaty Fork)",
+      "description": "Self-hosted server that watches Uniqlo's sale catalogue against your saved filters and notifies you via Apprise (~80 supported services).",
+      "categories": ["Tools", "Other"],
+      "platform": "linux",
+      "logo": "https://raw.githubusercontent.com/abbatykori/uniqlo-sales-alerter/main/docs/img/logo.png",
+      "image": "ghcr.io/abbatykori/uniqlo-sales-alerter:latest",
+      "restart_policy": "unless-stopped",
+      "ports": ["8000:8000/tcp"],
+      "volumes": [
+        {
+          "container": "/app/config.yaml",
+          "bind": "/var/data/uniqlo-alerter/config.yaml"
+        },
+        {
+          "container": "/app/data",
+          "bind": "/var/data/uniqlo-alerter/data"
+        }
+      ],
+      "env": [
+        {
+          "name": "ALERTER_SECRET",
+          "label": "HMAC secret for signed action URLs",
+          "description": "Leave blank to auto-generate to /app/data/.secret on first run.",
+          "default": ""
+        },
+        {
+          "name": "STORE_COUNTRY",
+          "label": "Uniqlo store country",
+          "description": "e.g. nl/nl, de/de, uk/en. See README for full list.",
+          "default": "nl/nl"
+        },
+        {
+          "name": "NOTIFICATIONS_APPRISE_URLS",
+          "label": "Apprise URLs (comma-separated)",
+          "description": "e.g. tgram://BOT_TOKEN/CHAT_ID,mailto://user:pass@gmail.com",
+          "default": ""
+        }
+      ]
+    }
+  ]
+}

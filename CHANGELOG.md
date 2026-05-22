@@ -4,9 +4,9 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 ---
 
-## Fork foundation — unreleased (Abbaty)
+## v2.0.0 — 2026-05-22 (Abbaty fork)
 
-Foundation work for the [Abbaty fork](docs/specs/). Steps 1-11 of the build per `docs/specs/00-handoff.md`. Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and HTMX UI, switches the matcher onto multi-saved-filter matching with per-filter snooze and availability_mode, adds the observability + secret-bootstrap layer plus the daily housekeeping cron, and wires HMAC-signed action URLs into notification chips so users can ignore/watch/unwatch/snooze straight from their inbox. No version bump until the multi-arch ghcr.io release (step 17). The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
+First tagged release of the [Abbaty fork](docs/specs/) — completes all 18 build steps per `docs/specs/00-handoff.md`. Builds the scaffolding for saved filters, SQLite-backed state, Apprise notifications, i18n, and an HTMX-driven mobile-first UI; switches the matcher onto multi-saved-filter matching with per-filter snooze and availability_mode; adds the observability + secret-bootstrap layer plus the daily housekeeping cron; wires HMAC-signed action URLs into notification chips so users can ignore/watch/unwatch/snooze straight from their inbox; adds the deal heatmap, the invoice-paste size-extraction flow, the upstream-config one-shot migration, the design-token-driven Tailwind shell with bottom-tab/sidebar navigation, status-pill footer, Deals/Inbox/Insights/Help pages, and a release workflow that publishes multi-arch images to ghcr.io. The Python package name remains `uniqlo_sales_alerter` (the tech-spec aspirational rename to `uniqlo_alerter` is deferred).
 
 ### Added
 
