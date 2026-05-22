@@ -24,7 +24,7 @@ def _clean_tables():
 
 
 def test_deals_view_first_run_empty_state(client):
-    r = client.get("/ui/")
+    r = client.get("/")
     assert r.status_code == 200
     assert "Watch Uniqlo sales in your sizes" in r.text
     assert "Add my first filter" in r.text
@@ -43,13 +43,13 @@ def test_deals_view_no_match_state_when_filters_exist(client):
                 ))
 
     asyncio.run(_seed())
-    r = client.get("/ui/")
+    r = client.get("/")
     assert r.status_code == 200
     assert "Nothing matched today" in r.text
 
 
 def test_inbox_view_empty_state(client):
-    r = client.get("/ui/inbox")
+    r = client.get("/inbox")
     assert r.status_code == 200
     assert "Notifications will appear here" in r.text
 
@@ -67,7 +67,7 @@ def test_inbox_view_renders_recent_dispatches(client):
                 ))
 
     asyncio.run(_seed())
-    r = client.get("/ui/inbox")
+    r = client.get("/inbox")
     assert r.status_code == 200
     assert "apprise" in r.text
     assert ">3<" in r.text
@@ -75,7 +75,7 @@ def test_inbox_view_renders_recent_dispatches(client):
 
 
 def test_help_index_lists_diataxis_categories(client):
-    r = client.get("/ui/help")
+    r = client.get("/help")
     assert r.status_code == 200
     for label in ("Tutorials", "How-to", "Reference", "Explanation"):
         assert label in r.text

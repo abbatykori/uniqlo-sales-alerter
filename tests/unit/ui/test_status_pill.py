@@ -1,4 +1,4 @@
-"""/ui/status-pill returns the right counts + freshness label."""
+"""/status-pill returns the right counts + freshness label."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ async def _insert(name: str, *, snooze_until=None, enabled: int = 1) -> None:
 
 
 def test_status_pill_empty_state(client):
-    r = client.get("/ui/status-pill")
+    r = client.get("/status-pill")
     assert r.status_code == 200
     assert "no check yet" in r.text
     assert "0 active" in r.text
@@ -52,7 +52,7 @@ def test_status_pill_counts_active_and_snoozed(client):
     # Disabled filters don't count
     asyncio.run(_insert("Disabled", enabled=0))
 
-    r = client.get("/ui/status-pill")
+    r = client.get("/status-pill")
     assert r.status_code == 200
     assert "2 active" in r.text
     assert "1 snoozed" in r.text
@@ -63,13 +63,13 @@ def test_status_pill_shows_last_check_age(client):
     from uniqlo_sales_alerter.main import app
 
     app.state.app_state.last_check_at = datetime.now(timezone.utc) - timedelta(minutes=15)
-    r = client.get("/ui/status-pill")
+    r = client.get("/status-pill")
     assert r.status_code == 200
     assert "15 min ago" in r.text or "14 min ago" in r.text
 
 
 def test_base_shell_includes_status_pill_polling(client):
-    r = client.get("/ui/filters")
+    r = client.get("/filters")
     assert r.status_code == 200
-    assert 'hx-get="/ui/status-pill"' in r.text
+    assert 'hx-get="/status-pill"' in r.text
     assert "every 30s" in r.text

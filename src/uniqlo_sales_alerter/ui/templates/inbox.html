@@ -2,10 +2,9 @@
 {% block title %}Inbox — Uniqlo Sales Alerter{% endblock %}
 
 {% block content %}
-<header class="mb-6">
-    <h1 class="text-2xl font-serif">Inbox</h1>
-    <p class="text-text-secondary text-sm mt-1">Recent notification dispatches.</p>
-</header>
+{% with title="Inbox", breadcrumbs=[("Home","/"),("Inbox", None)], subtitle="Recent notification dispatches." %}
+    {% include "_page_header.html" %}
+{% endwith %}
 
 {% if not rows %}
     <section class="rounded-card bg-raised border border-border-default p-6 max-w-xl">

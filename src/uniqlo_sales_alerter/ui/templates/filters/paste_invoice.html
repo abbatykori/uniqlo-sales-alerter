@@ -2,20 +2,27 @@
 {% block title %}Paste invoice — Uniqlo Sales Alerter{% endblock %}
 
 {% block content %}
-<h1>Paste invoice to extract sizes</h1>
-<p class="muted">Paste the body of a Uniqlo order email (or invoice). We'll detect the sizes and suggest them as chips you can copy into a saved filter.</p>
+{% with title="Paste invoice",
+        breadcrumbs=[("Home","/"),("Filters","/filters"),("Paste invoice", None)],
+        subtitle="Paste the body of a Uniqlo order email or invoice — we'll detect the sizes and suggest them as chips you can copy into a saved filter." %}
+    {% include "_page_header.html" %}
+{% endwith %}
 
-<form hx-post="/ui/filters/paste"
+<form class="max-w-2xl space-y-4"
+      hx-post="/filters/paste"
       hx-target="#paste-result"
       hx-swap="innerHTML">
-    <div class="row">
-        <textarea name="text" rows="14" placeholder="Paste invoice text here..."
-                  style="width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.9em;"
-                  required></textarea>
+    <textarea name="text" rows="14" placeholder="Paste invoice text here..."
+              class="w-full rounded border border-border-default bg-raised px-3 py-2 font-mono text-sm focus:border-border-strong focus:outline-none"
+              required></textarea>
+    <div class="flex items-center gap-3">
+        <button type="submit"
+                class="inline-flex items-center justify-center rounded-card bg-accent text-text-inverse font-medium px-4 py-2">
+            Detect sizes
+        </button>
+        <a href="/filters" class="text-text-secondary text-sm">Cancel</a>
     </div>
-    <button type="submit">Detect sizes</button>
-    <a href="/ui/filters" style="margin-left:1rem">Cancel</a>
 </form>
 
-<div id="paste-result" style="margin-top:1.5rem"></div>
+<div id="paste-result" class="mt-6"></div>
 {% endblock %}

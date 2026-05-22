@@ -63,31 +63,31 @@
     <div class="flex min-h-screen flex-col md:flex-row">
         {# Desktop sidebar #}
         <aside class="hidden md:flex md:w-56 md:flex-col md:border-r md:border-border-default md:bg-raised md:px-4 md:py-6">
-            <a href="/ui/" class="font-serif text-lg font-medium text-text-primary mb-6">Uniqlo Alerter</a>
+            <a href="/" class="font-serif text-lg font-medium text-text-primary mb-6">Uniqlo Alerter</a>
             <nav class="flex flex-col gap-1 text-sm">
-                <a href="/ui/" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
+                <a href="/" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M232 96H160V40a24 24 0 0 0-24-24H120a24 24 0 0 0-24 24v56H24a8 8 0 0 0-8 8v112a16 16 0 0 0 16 16h192a16 16 0 0 0 16-16V104a8 8 0 0 0-8-8Zm-72-56h-16v56h16ZM32 216V112h208v104H32Z"/></svg>
                     Deals
                 </a>
-                <a href="/ui/filters" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
+                <a href="/filters" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M230.6 49.5A8 8 0 0 0 224 40H32a8 8 0 0 0-6.6 12.5l72 96V216a8 8 0 0 0 11.6 7.2l32-16a8 8 0 0 0 4.4-7.2v-51.3l72-96A8 8 0 0 0 230.6 49.5Z"/></svg>
                     Filters
                 </a>
-                <a href="/ui/inbox" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
+                <a href="/inbox" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M224 48H32a8 8 0 0 0-8 8v144a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a8 8 0 0 0-8-8Z"/></svg>
                     Inbox
                 </a>
-                <a href="/ui/insights" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
+                <a href="/insights" class="flex items-center gap-2 rounded px-3 py-2 hover:bg-sunken">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 256 256"><path d="M224 200H32V56a8 8 0 0 0-16 0v152a8 8 0 0 0 8 8h200a8 8 0 0 0 0-16Z"/></svg>
                     Insights
                 </a>
                 <hr class="my-2 border-border-default">
                 <a href="/settings" class="rounded px-3 py-2 hover:bg-sunken text-text-secondary">Settings</a>
-                <a href="/ui/help" class="rounded px-3 py-2 hover:bg-sunken text-text-secondary">Help</a>
+                <a href="/help" class="rounded px-3 py-2 hover:bg-sunken text-text-secondary">Help</a>
             </nav>
 
             <div class="mt-auto pt-6"
-                 hx-get="/ui/status-pill"
+                 hx-get="/status-pill"
                  hx-trigger="load, every 30s"
                  hx-swap="innerHTML">
                 <span class="text-xs text-text-muted">Loading status...</span>
@@ -102,25 +102,25 @@
         {# Mobile bottom tab bar #}
         <nav class="md:hidden fixed bottom-0 inset-x-0 z-10 border-t border-border-default bg-raised">
             <div class="flex justify-around text-xs text-text-secondary">
-                <a href="/ui/" class="flex-1 py-2 text-center">
+                <a href="/" class="flex-1 py-2 text-center">
                     <div class="mx-auto w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M232 96H160V40a24 24 0 0 0-24-24H120a24 24 0 0 0-24 24v56H24a8 8 0 0 0-8 8v112a16 16 0 0 0 16 16h192a16 16 0 0 0 16-16V104a8 8 0 0 0-8-8Z"/></svg>
                     </div>
                     Deals
                 </a>
-                <a href="/ui/filters" class="flex-1 py-2 text-center">
+                <a href="/filters" class="flex-1 py-2 text-center">
                     <div class="mx-auto w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M230.6 49.5A8 8 0 0 0 224 40H32a8 8 0 0 0-6.6 12.5l72 96V216a8 8 0 0 0 11.6 7.2l32-16a8 8 0 0 0 4.4-7.2v-51.3l72-96A8 8 0 0 0 230.6 49.5Z"/></svg>
                     </div>
                     Filters
                 </a>
-                <a href="/ui/inbox" class="flex-1 py-2 text-center">
+                <a href="/inbox" class="flex-1 py-2 text-center">
                     <div class="mx-auto w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M224 48H32a8 8 0 0 0-8 8v144a16 16 0 0 0 16 16h176a16 16 0 0 0 16-16V56a8 8 0 0 0-8-8Z"/></svg>
                     </div>
                     Inbox
                 </a>
-                <a href="/ui/insights" class="flex-1 py-2 text-center">
+                <a href="/insights" class="flex-1 py-2 text-center">
                     <div class="mx-auto w-5 h-5">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256"><path d="M224 200H32V56a8 8 0 0 0-16 0v152a8 8 0 0 0 8 8h200a8 8 0 0 0 0-16Z"/></svg>
                     </div>
@@ -132,7 +132,7 @@
                 </a>
             </div>
             <div class="px-3 pb-1 pt-0 text-center"
-                 hx-get="/ui/status-pill"
+                 hx-get="/status-pill"
                  hx-trigger="load, every 30s"
                  hx-swap="innerHTML">
                 <span class="text-xs text-text-muted">Loading status...</span>

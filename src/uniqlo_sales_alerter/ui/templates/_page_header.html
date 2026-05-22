@@ -1,0 +1,27 @@
+{#
+  Page-header partial — title, breadcrumbs, optional subtitle.
+
+  Usage:
+    {% with title="Filters", breadcrumbs=[("Home","/"),("Filters",None)], subtitle="…" %}
+      {% include "_page_header.html" %}
+    {% endwith %}
+
+  ``breadcrumbs`` is a list of ``(label, href_or_none)`` tuples — the final
+  entry should pass ``None`` for href so it renders as the current page.
+#}
+<header class="mb-6">
+    {% if breadcrumbs %}
+    <nav class="text-text-muted text-xs mb-1" aria-label="Breadcrumb">
+        {% for label, href in breadcrumbs %}
+            {% if not loop.last and href %}
+                <a href="{{ href }}" class="hover:underline">{{ label }}</a>
+                <span class="px-1">›</span>
+            {% else %}
+                <span aria-current="page">{{ label }}</span>
+            {% endif %}
+        {% endfor %}
+    </nav>
+    {% endif %}
+    <h1 class="text-2xl font-serif">{{ title }}</h1>
+    {% if subtitle %}<p class="text-text-secondary text-sm mt-1">{{ subtitle }}</p>{% endif %}
+</header>

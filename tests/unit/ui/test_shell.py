@@ -17,14 +17,14 @@ def test_static_tokens_css_is_served(client):
 
 def test_base_shell_includes_tailwind_cdn(client):
     """The new base.html should pull Tailwind from a CDN until we wire the CLI."""
-    r = client.get("/ui/filters")
+    r = client.get("/filters")
     assert r.status_code == 200
     assert "cdn.tailwindcss.com" in r.text
     assert '<link rel="stylesheet" href="/static/tokens.css"' in r.text
 
 
 def test_base_shell_has_desktop_sidebar_and_mobile_tab_bar(client):
-    r = client.get("/ui/filters")
+    r = client.get("/filters")
     assert r.status_code == 200
     # Sidebar (hidden on mobile, flex on desktop)
     assert "hidden md:flex" in r.text

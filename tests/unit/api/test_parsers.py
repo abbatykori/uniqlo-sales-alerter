@@ -1,4 +1,4 @@
-"""POST /api/v1/parsers/invoice and the HTMX /ui/filters/paste flow."""
+"""POST /api/v1/parsers/invoice and the HTMX /filters/paste flow."""
 
 from __future__ import annotations
 
@@ -54,14 +54,14 @@ def test_rest_invoice_parse_empty_body_returns_422(client):
 
 
 def test_ui_paste_form_renders(client):
-    r = client.get("/ui/filters/paste")
+    r = client.get("/filters/paste")
     assert r.status_code == 200
     assert "<textarea" in r.text
     assert 'name="text"' in r.text
 
 
 def test_ui_paste_post_returns_chip_suggestions(client):
-    r = client.post("/ui/filters/paste", data={"text": _NL_FIXTURE})
+    r = client.post("/filters/paste", data={"text": _NL_FIXTURE})
     assert r.status_code == 200
     assert "120cm" in r.text
     assert "XL" in r.text
@@ -70,12 +70,12 @@ def test_ui_paste_post_returns_chip_suggestions(client):
 
 
 def test_ui_paste_post_empty_text_shows_friendly_message(client):
-    r = client.post("/ui/filters/paste", data={"text": ""})
+    r = client.post("/filters/paste", data={"text": ""})
     assert r.status_code == 200
     assert "No detectable sizes" in r.text
 
 
 def test_ui_paste_post_with_garbage_explains(client):
-    r = client.post("/ui/filters/paste", data={"text": "Hello there"})
+    r = client.post("/filters/paste", data={"text": "Hello there"})
     assert r.status_code == 200
     assert "No sizes detected" in r.text

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 
 def test_list_empty_renders(client):
-    resp = client.get("/ui/filters")
+    resp = client.get("/filters")
     assert resp.status_code == 200
     assert "No saved filters yet" in resp.text
     assert "Add filter" in resp.text
 
 
 def test_new_form_renders(client):
-    resp = client.get("/ui/filters/new")
+    resp = client.get("/filters/new")
     assert resp.status_code == 200
     assert "<form" in resp.text
     assert 'name="name"' in resp.text
@@ -20,7 +20,7 @@ def test_new_form_renders(client):
 
 def test_create_via_form_returns_row_partial(client):
     resp = client.post(
-        "/ui/filters",
+        "/filters",
         data={
             "name": "Me tops",
             "gender": "men",
@@ -37,7 +37,7 @@ def test_create_via_form_returns_row_partial(client):
 
 def test_list_after_create_includes_row(client):
     client.post(
-        "/ui/filters",
+        "/filters",
         data={
             "name": "Kid 5y",
             "gender": "kids",
@@ -45,7 +45,7 @@ def test_list_after_create_includes_row(client):
             "availability_mode": "online",
         },
     )
-    resp = client.get("/ui/filters")
+    resp = client.get("/filters")
     assert resp.status_code == 200
     assert "<table" in resp.text
     assert "Kid 5y" in resp.text
@@ -53,7 +53,7 @@ def test_list_after_create_includes_row(client):
 
 def test_delete_returns_empty_for_htmx_swap(client):
     create = client.post(
-        "/ui/filters",
+        "/filters",
         data={
             "name": "delete-me",
             "gender": "unisex",
@@ -69,14 +69,14 @@ def test_delete_returns_empty_for_htmx_swap(client):
     assert match is not None, "expected partial to include filter-row-<id>"
     filter_id = int(match.group(1))
 
-    resp = client.delete(f"/ui/filters/{filter_id}")
+    resp = client.delete(f"/filters/{filter_id}")
     assert resp.status_code == 200
     assert resp.text == ""
 
 
 def test_create_with_invalid_gender_returns_400(client):
     resp = client.post(
-        "/ui/filters",
+        "/filters",
         data={
             "name": "bad",
             "gender": "xenomorph",
@@ -90,7 +90,7 @@ def test_create_with_invalid_gender_returns_400(client):
 
 def test_edit_form_renders_existing_values(client):
     create = client.post(
-        "/ui/filters",
+        "/filters",
         data={
             "name": "Spouse",
             "gender": "women",
@@ -103,7 +103,7 @@ def test_edit_form_renders_existing_values(client):
 
     filter_id = int(re.search(r'id="filter-row-(\d+)"', create.text).group(1))
 
-    resp = client.get(f"/ui/filters/{filter_id}/edit")
+    resp = client.get(f"/filters/{filter_id}/edit")
     assert resp.status_code == 200
     assert 'value="Spouse"' in resp.text
     assert 'selected' in resp.text  # availability or gender pre-selected

@@ -38,7 +38,7 @@ from uniqlo_sales_alerter.services.saved_filters import (
 TEMPLATES_DIR: Path = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-router = APIRouter(prefix="/ui", tags=["ui"])
+router = APIRouter(prefix="", tags=["ui"])
 
 
 def _parse_comma_list(value: str) -> list[str]:
@@ -315,7 +315,6 @@ async def status_pill(request: Request) -> HTMLResponse:
 
 
 @router.get("/", response_class=HTMLResponse)
-@router.get("", response_class=HTMLResponse)
 async def deals_view(
     request: Request,
     session: AsyncSession = Depends(get_session),

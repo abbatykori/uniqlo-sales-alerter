@@ -2,16 +2,16 @@
 {% block title %}Tutorials — Help{% endblock %}
 
 {% block content %}
-<a href="/ui/help" class="text-text-secondary text-sm">&larr; Back to Help</a>
-<h1 class="text-2xl font-serif mt-2">Tutorials</h1>
-<p class="text-text-secondary text-sm mt-1">Learn by following a sequence.</p>
+{% with title="Tutorials", breadcrumbs=[("Home","/"),("Help","/help"),("Tutorials", None)], subtitle="Learn by following a sequence." %}
+    {% include "_page_header.html" %}
+{% endwith %}
 
 <div class="prose mt-6 max-w-2xl">
     <h2 class="text-lg font-serif mt-6">Add your first filter</h2>
     <ol class="list-decimal pl-6 mt-2 space-y-2 text-sm">
-        <li>Open <a class="underline" href="/ui/filters/new">/ui/filters/new</a>.</li>
+        <li>Open <a class="underline" href="/filters/new">/filters/new</a>.</li>
         <li>Name it something memorable: "Me tops" or "Kid 5y" work well.</li>
-        <li>Set gender + sizes. Tip: <a class="underline" href="/ui/filters/paste">paste an invoice</a> to auto-detect.</li>
+        <li>Set gender + sizes. Tip: <a class="underline" href="/filters/paste">paste an invoice</a> to auto-detect.</li>
         <li>Set min discount (e.g. 40%) and availability ("both" is fine to start).</li>
         <li>Save. The next scheduled check will use your filter.</li>
     </ol>

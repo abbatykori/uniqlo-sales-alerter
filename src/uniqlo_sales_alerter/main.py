@@ -12,7 +12,7 @@ from typing import AsyncIterator
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 
 from uniqlo_sales_alerter.api.health import router as health_router
@@ -368,6 +368,13 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 _STATIC_DIR = _Path(__file__).parent / "ui" / "static"
 if _STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+
+@app.get("/ui/{path:path}", include_in_schema=False)
+async def legacy_ui_redirect(path: str) -> RedirectResponse:
+    """Permanent redirect from the v2.0 ``/ui/*`` paths to the new root-mounted UI."""
+    target = f"/{path}" if path else "/"
+    return RedirectResponse(url=target, status_code=308)
 
 
 @app.get("/settings", response_class=HTMLResponse)

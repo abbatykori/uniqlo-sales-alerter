@@ -2,18 +2,18 @@
 {% block title %}How-to — Help{% endblock %}
 
 {% block content %}
-<a href="/ui/help" class="text-text-secondary text-sm">&larr; Back to Help</a>
-<h1 class="text-2xl font-serif mt-2">How-to</h1>
-<p class="text-text-secondary text-sm mt-1">Recipes for specific tasks.</p>
+{% with title="How-to", breadcrumbs=[("Home","/"),("Help","/help"),("How-to", None)], subtitle="Recipes for specific tasks." %}
+    {% include "_page_header.html" %}
+{% endwith %}
 
 <div class="space-y-6 mt-6 max-w-2xl text-sm">
     <section>
         <h2 class="text-lg font-serif">Paste an invoice to extract sizes</h2>
-        <p class="mt-1">Go to <a class="underline" href="/ui/filters/paste">/ui/filters/paste</a>, paste your Uniqlo order email body, click "Detect sizes". The chip rows show clothing / pants / shoes / kids categorisation.</p>
+        <p class="mt-1">Go to <a class="underline" href="/filters/paste">/filters/paste</a>, paste your Uniqlo order email body, click "Detect sizes". The chip rows show clothing / pants / shoes / kids categorisation.</p>
     </section>
     <section>
         <h2 class="text-lg font-serif">Snooze a filter</h2>
-        <p class="mt-1">From <a class="underline" href="/ui/filters">/ui/filters</a>, click "Snooze" on a row and pick 1d / 7d / 30d / forever. Use "Resume now" to clear the snooze.</p>
+        <p class="mt-1">From <a class="underline" href="/filters">/filters</a>, click "Snooze" on a row and pick 1d / 7d / 30d / forever. Use "Resume now" to clear the snooze.</p>
     </section>
     <section>
         <h2 class="text-lg font-serif">Snooze from a notification</h2>

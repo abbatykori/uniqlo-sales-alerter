@@ -1,4 +1,4 @@
-"""/ui/insights renders the heatmap or the insufficient-data banner."""
+"""/insights renders the heatmap or the insufficient-data banner."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ async def _seed(*, days: int, hits_per_day: int = 1) -> None:
 
 def test_insights_renders_insufficient_data_banner(client):
     asyncio.run(_seed(days=5))
-    r = client.get("/ui/insights")
+    r = client.get("/insights")
     assert r.status_code == 200
     assert "Heatmap will activate" in r.text
     assert "Currently: 5 days" in r.text
@@ -51,7 +51,7 @@ def test_insights_renders_insufficient_data_banner(client):
 
 def test_insights_renders_grid_when_sufficient(client):
     asyncio.run(_seed(days=INSUFFICIENT_DATA_DAYS, hits_per_day=2))
-    r = client.get("/ui/insights")
+    r = client.get("/insights")
     assert r.status_code == 200
     assert "Heatmap will activate" not in r.text
     # 7 day labels in the row headers
@@ -65,14 +65,14 @@ def test_insights_renders_grid_when_sufficient(client):
 def test_insights_lookback_param_respected(client):
     """A 30-day lookback should display the same shape but use the requested window."""
     asyncio.run(_seed(days=5))
-    r = client.get("/ui/insights?lookback=30")
+    r = client.get("/insights?lookback=30")
     assert r.status_code == 200
     assert "last 30 days" in r.text
 
 
 def test_insights_renders_all_168_cells(client):
     asyncio.run(_seed(days=INSUFFICIENT_DATA_DAYS))
-    r = client.get("/ui/insights")
+    r = client.get("/insights")
     assert r.status_code == 200
     # Each cell is a <td> with title=... and rgba background
     assert r.text.count("rgba(194,165,109,") == 7 * 24

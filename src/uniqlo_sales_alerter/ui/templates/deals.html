@@ -2,16 +2,16 @@
 {% block title %}Deals — Uniqlo Sales Alerter{% endblock %}
 
 {% block content %}
-<header class="mb-6">
-    <h1 class="text-2xl font-serif">Deals</h1>
-    <p class="text-text-secondary text-sm mt-1">
-        {% if last_check_at %}
-            Last check ran at <span class="font-mono text-xs">{{ last_check_at.strftime("%Y-%m-%d %H:%M UTC") }}</span>.
-        {% else %}
-            No check has run yet. Add a filter or wait for the scheduler.
-        {% endif %}
-    </p>
-</header>
+{% with title="Deals", breadcrumbs=[("Deals", None)] %}
+    {% include "_page_header.html" %}
+{% endwith %}
+<p class="text-text-secondary text-sm -mt-4 mb-6">
+    {% if last_check_at %}
+        Last check ran at <span class="font-mono text-xs">{{ last_check_at.strftime("%Y-%m-%d %H:%M UTC") }}</span>.
+    {% else %}
+        No check has run yet. Add a filter or wait for the scheduler.
+    {% endif %}
+</p>
 
 {% if not filters and not watched_only and not deals_by_filter %}
     {# First-run empty state #}
@@ -19,15 +19,15 @@
         <h2 class="text-xl font-serif mb-3">Watch Uniqlo sales in your sizes</h2>
         <p class="text-text-secondary mb-6">Create named saved filters describing what you're watching for. A deal matches if any of your filters does.</p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="/ui/filters/new" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-accent text-text-inverse font-medium">
+            <a href="/filters/new" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-accent text-text-inverse font-medium">
                 Add my first filter
             </a>
-            <a href="/ui/filters/paste" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-sunken text-text-primary">
+            <a href="/filters/paste" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-sunken text-text-primary">
                 Paste a recent invoice
             </a>
         </div>
         <p class="mt-6 text-xs text-text-muted">
-            Or jump to <a href="/ui/help" class="underline">Help</a> for the wizard explainer.
+            Or jump to <a href="/help" class="underline">Help</a> for the wizard explainer.
         </p>
     </section>
 {% elif not deals_by_filter and not watched_only %}
@@ -36,7 +36,7 @@
         <h2 class="text-lg font-serif mb-2">Nothing matched today.</h2>
         <p class="text-text-secondary text-sm">
             Try adjusting a filter or
-            <a href="/ui/filters/paste" class="underline">paste a recent invoice</a>
+            <a href="/filters/paste" class="underline">paste a recent invoice</a>
             to discover sizes.
         </p>
     </section>

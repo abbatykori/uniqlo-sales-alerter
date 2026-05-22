@@ -16,17 +16,17 @@
     <td>{{ f.availability_mode }}</td>
     <td>{{ "yes" if f.enabled else "no" }}</td>
     <td class="actions">
-        <a href="/ui/filters/{{ f.id }}/edit">Edit</a>
+        <a href="/filters/{{ f.id }}/edit">Edit</a>
         {% if is_snoozed %}
             <button type="button"
-                    hx-post="/ui/filters/{{ f.id }}/resume"
+                    hx-post="/filters/{{ f.id }}/resume"
                     hx-target="#filter-row-{{ f.id }}"
                     hx-swap="outerHTML">
                 Resume now
             </button>
         {% else %}
             <button type="button"
-                    hx-get="/ui/filters/{{ f.id }}/snooze"
+                    hx-get="/filters/{{ f.id }}/snooze"
                     hx-target="#snooze-popover-{{ f.id }}"
                     hx-swap="innerHTML">
                 Snooze
@@ -34,7 +34,7 @@
             <span id="snooze-popover-{{ f.id }}" style="display:inline"></span>
         {% endif %}
         <button type="button"
-                hx-delete="/ui/filters/{{ f.id }}"
+                hx-delete="/filters/{{ f.id }}"
                 hx-target="#filter-row-{{ f.id }}"
                 hx-swap="outerHTML"
                 hx-confirm="Delete filter '{{ f.name }}'?">

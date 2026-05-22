@@ -4,18 +4,27 @@
 {% endblock %}
 
 {% block content %}
-<header class="mb-6">
-    <h1 class="text-2xl font-serif">
-        {% if filter and filter.id %}Edit filter #{{ filter.id }}{% else %}New filter{% endif %}
-    </h1>
-    {% if not filter or not filter.id %}
-        <p class="text-text-secondary text-sm mt-1">
-            Name your filter, pick its sizes, and set the discount threshold.
-            Need to discover sizes?
-            <a class="underline" href="/ui/filters/paste">Paste an invoice.</a>
-        </p>
-    {% endif %}
-</header>
+{% set _is_edit = filter and filter.id %}
+{% if _is_edit %}
+    {% set _title = "Edit filter #" ~ filter.id %}
+    {% set _crumb = "Edit #" ~ filter.id %}
+    {% set _subtitle = none %}
+{% else %}
+    {% set _title = "New filter" %}
+    {% set _crumb = "New" %}
+    {% set _subtitle = "Name your filter, pick its sizes, and set the discount threshold." %}
+{% endif %}
+{% with title=_title,
+        breadcrumbs=[("Home","/"),("Filters","/filters"),(_crumb, None)],
+        subtitle=_subtitle %}
+    {% include "_page_header.html" %}
+{% endwith %}
+{% if not _is_edit %}
+    <p class="text-text-secondary text-sm -mt-4 mb-6">
+        Need to discover sizes?
+        <a class="underline" href="/filters/paste">Paste an invoice.</a>
+    </p>
+{% endif %}
 
 {% if errors %}
 <div class="rounded-card border border-status-error bg-raised p-3 mb-4 text-status-error text-sm">
@@ -26,7 +35,7 @@
 <form class="max-w-2xl space-y-6"
       method="post"
       action="{% if filter and filter.id %}/ui/filters/{{ filter.id }}{% else %}/ui/filters{% endif %}"
-      {% if filter and filter.id %}hx-put="/ui/filters/{{ filter.id }}"{% else %}hx-post="/ui/filters"{% endif %}>
+      {% if filter and filter.id %}hx-put="/filters/{{ filter.id }}"{% else %}hx-post="/filters"{% endif %}>
 
     {# Step 1 — Name #}
     <fieldset class="rounded-card bg-raised border border-border-default p-5">
@@ -84,7 +93,7 @@
 
         <p class="text-text-muted text-xs">
             Don't know your sizes?
-            <a class="underline" href="/ui/filters/paste" target="_blank">Paste an invoice</a>
+            <a class="underline" href="/filters/paste">Paste an invoice</a>
             and we'll suggest them.
         </p>
     </fieldset>
@@ -134,7 +143,7 @@
                 class="inline-flex items-center justify-center rounded-card bg-accent text-text-inverse font-medium px-4 py-2">
             Save filter
         </button>
-        <a href="/ui/filters" class="text-text-secondary text-sm">Cancel</a>
+        <a href="/filters" class="text-text-secondary text-sm">Cancel</a>
     </div>
 </form>
 {% endblock %}

@@ -2,7 +2,7 @@
     Snooze for:
     {% for label, duration in [("1d", "1d"), ("7d", "7d"), ("30d", "30d"), ("forever", "forever")] %}
         <button type="button"
-                hx-post="/ui/filters/{{ filter_id }}/snooze"
+                hx-post="/filters/{{ filter_id }}/snooze"
                 hx-vals='{"duration": "{{ duration }}"}'
                 hx-target="#filter-row-{{ filter_id }}"
                 hx-swap="outerHTML"
