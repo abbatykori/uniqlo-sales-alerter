@@ -10,6 +10,8 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 
 - **UI is mounted at the root.** The Deals page now serves at `/` instead of `/ui/`. Legacy `/ui/*` paths return `308 Permanent Redirect` to the new locations so any v2.0 bookmarks keep working.
 - **Consistent page headers.** Every page renders the same breadcrumb + title pattern via a new `_page_header.html` partial. The paste-invoice screen is restyled to match the rest of the Tailwind UI.
+- **Deal cards are clickable.** The image and a new "View on Uniqlo →" CTA both open the first variant in a new tab. Size pills keep their direct deep-links.
+- **Price layout stacks vertically.** Strikethrough original price sits above the sale price + discount badge, so nothing wraps on narrow screens.
 
 ---
 

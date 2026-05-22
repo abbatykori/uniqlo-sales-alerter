@@ -1,8 +1,27 @@
-<article class="rounded-card bg-raised border border-border-default overflow-hidden">
-    {% if deal.image_url %}
-        <img src="{{ deal.image_url }}" alt="" class="w-full h-48 object-cover" loading="lazy">
+{# Deal card — clickable image + size pills + CTA all linking to Uniqlo.
+
+   We avoid wrapping the whole article in an <a> because the size pills
+   inside are themselves anchors (nested-anchor HTML is invalid). The image
+   and "View on Uniqlo" CTA are both anchors pointing at the first variant URL.
+#}
+{% set _primary_url = deal.product_urls[0] if deal.product_urls else None %}
+<article class="rounded-card bg-raised border border-border-default overflow-hidden transition hover:shadow-md">
+    {% if _primary_url %}
+        <a href="{{ _primary_url }}" target="_blank" rel="noopener" class="block group">
+            {% if deal.image_url %}
+                <img src="{{ deal.image_url }}" alt="{{ deal.name }}"
+                     class="w-full h-48 object-cover transition group-hover:opacity-90"
+                     loading="lazy">
+            {% else %}
+                <div class="w-full h-48 bg-sunken text-text-muted text-sm flex items-center justify-center">No image</div>
+            {% endif %}
+        </a>
     {% else %}
-        <div class="w-full h-48 bg-sunken text-text-muted text-sm flex items-center justify-center">No image</div>
+        {% if deal.image_url %}
+            <img src="{{ deal.image_url }}" alt="{{ deal.name }}" class="w-full h-48 object-cover" loading="lazy">
+        {% else %}
+            <div class="w-full h-48 bg-sunken text-text-muted text-sm flex items-center justify-center">No image</div>
+        {% endif %}
     {% endif %}
     <div class="p-4">
         <h3 class="font-medium text-text-primary text-sm">
@@ -11,25 +30,50 @@
                 <span class="ml-2 inline-block rounded-pill bg-accent text-text-inverse text-[10px] px-2 py-0.5">Watched</span>
             {% endif %}
         </h3>
-        <div class="mt-2 text-sm">
-            {% if deal.has_known_discount and deal.discount_percentage > 0 %}
-                <span class="line-through text-text-muted">{{ deal.currency_symbol }}{{ "%.2f"|format(deal.original_price) }}</span>
-                <span class="ml-1 font-medium text-status-error">{{ deal.currency_symbol }}{{ "%.2f"|format(deal.sale_price) }}</span>
-                <span class="ml-1 text-status-success font-medium">-{{ "%.0f"|format(deal.discount_percentage) }}%</span>
-            {% elif not deal.has_known_discount %}
-                <span class="font-medium text-status-error">{{ deal.currency_symbol }}{{ "%.2f"|format(deal.sale_price) }}</span>
-                <span class="ml-1 rounded-pill bg-status-success text-text-inverse text-[10px] px-2 py-0.5">Sale</span>
-            {% else %}
-                <span class="font-medium">{{ deal.currency_symbol }}{{ "%.2f"|format(deal.sale_price) }}</span>
-            {% endif %}
-        </div>
-        <div class="mt-2 flex flex-wrap gap-1">
+
+        {# Price block — original on line 1, sale + discount on line 2 #}
+        {% if deal.has_known_discount and deal.discount_percentage > 0 %}
+            <div class="mt-2 text-xs text-text-muted line-through">
+                {{ deal.currency_symbol }}{{ "%.2f"|format(deal.original_price) }}
+            </div>
+            <div class="text-sm flex items-baseline gap-2">
+                <span class="font-medium text-status-error">
+                    {{ deal.currency_symbol }}{{ "%.2f"|format(deal.sale_price) }}
+                </span>
+                <span class="inline-block rounded-pill bg-status-success text-text-inverse text-[10px] px-2 py-0.5 font-medium">
+                    -{{ "%.0f"|format(deal.discount_percentage) }}%
+                </span>
+            </div>
+        {% elif not deal.has_known_discount %}
+            <div class="mt-2 text-sm flex items-baseline gap-2">
+                <span class="font-medium text-status-error">
+                    {{ deal.currency_symbol }}{{ "%.2f"|format(deal.sale_price) }}
+                </span>
+                <span class="inline-block rounded-pill bg-status-success text-text-inverse text-[10px] px-2 py-0.5 font-medium">
+                    Sale
+                </span>
+            </div>
+        {% else %}
+            <div class="mt-2 text-sm font-medium">
+                {{ deal.currency_symbol }}{{ "%.2f"|format(deal.sale_price) }}
+            </div>
+        {% endif %}
+
+        <div class="mt-3 flex flex-wrap gap-1">
             {% for size in deal.available_sizes %}
                 <a href="{{ deal.product_urls[loop.index0] if loop.index0 < deal.product_urls|length else '#' }}"
+                   target="_blank" rel="noopener"
                    class="rounded-pill bg-sunken text-text-primary text-xs px-2 py-0.5 hover:bg-accent-muted">
                     {{ size }}
                 </a>
             {% endfor %}
         </div>
+
+        {% if _primary_url %}
+            <a href="{{ _primary_url }}" target="_blank" rel="noopener"
+               class="mt-3 inline-flex items-center text-xs text-accent font-medium hover:underline">
+                View on Uniqlo →
+            </a>
+        {% endif %}
     </div>
 </article>
