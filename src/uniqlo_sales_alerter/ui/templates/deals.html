@@ -16,7 +16,12 @@
 {% if not filters and not watched_only and not deals_by_filter %}
     {# First-run empty state #}
     <section class="rounded-card bg-raised border border-border-default p-8 text-center max-w-xl">
-        <h2 class="text-xl font-serif mb-3">Watch Uniqlo sales in your sizes</h2>
+        <h2 class="text-xl font-serif mb-3">
+            Watch Uniqlo sales in your sizes
+            {% with text="A saved filter is just a named query: gender, sizes, minimum discount. The matcher runs every check against all of them in parallel.", learn_more="/help/explanation" %}
+                {% include "_help_tip.html" %}
+            {% endwith %}
+        </h2>
         <p class="text-text-secondary mb-6">Create named saved filters describing what you're watching for. A deal matches if any of your filters does.</p>
         <div class="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="/filters/new" class="inline-flex items-center justify-center px-4 py-2 rounded-card bg-accent text-text-inverse font-medium">

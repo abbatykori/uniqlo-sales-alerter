@@ -12,7 +12,12 @@
     {# ---------------- Notifications ---------------- #}
     <section class="rounded-card bg-raised border border-border-default p-5">
         <header class="mb-4">
-            <h2 class="text-lg font-serif">Notifications</h2>
+            <h2 class="text-lg font-serif">
+                Notifications
+                {% with text="Every matched deal is dispatched to all configured Apprise URLs in parallel. Failures are logged in the Inbox.", learn_more="/help/how-to" %}
+                    {% include "_help_tip.html" %}
+                {% endwith %}
+            </h2>
             <p class="text-text-secondary text-sm mt-1">
                 Apprise URLs for delivery. Supports ~80 services: Telegram, email, Pushover,
                 Discord, Slack, and more.
@@ -45,7 +50,12 @@
     {# ---------------- Schedule ---------------- #}
     <section class="rounded-card bg-raised border border-border-default p-5">
         <header class="mb-4">
-            <h2 class="text-lg font-serif">Schedule</h2>
+            <h2 class="text-lg font-serif">
+                Schedule
+                {% with text="Interval checks are throttled if a fixed-time check ran recently. Use \"0\" to disable interval checks and rely only on fixed times." %}
+                    {% include "_help_tip.html" %}
+                {% endwith %}
+            </h2>
             <p class="text-text-secondary text-sm mt-1">When to run the periodic sale checks.</p>
         </header>
 
@@ -96,7 +106,12 @@
     {# ---------------- Country ---------------- #}
     <section class="rounded-card bg-raised border border-border-default p-5">
         <header class="mb-4">
-            <h2 class="text-lg font-serif">Store country &amp; language</h2>
+            <h2 class="text-lg font-serif">
+                Store country &amp; language
+                {% with text="Each country uses a different Uniqlo API endpoint and URL format. Some (PH, TH) don't expose store-stock data and downgrade in-store-only filters." %}
+                    {% include "_help_tip.html" %}
+                {% endwith %}
+            </h2>
             <p class="text-text-secondary text-sm mt-1">
                 Which Uniqlo storefront to track. The API hostname switches accordingly.
             </p>
@@ -134,7 +149,12 @@
     {# ---------------- Watched variants ---------------- #}
     <section class="rounded-card bg-raised border border-border-default p-5">
         <header class="mb-4">
-            <h2 class="text-lg font-serif">Watched variants</h2>
+            <h2 class="text-lg font-serif">
+                Watched variants
+                {% with text="Bypass all saved filters — these variants always appear in the Deals view even if no filter matched them." %}
+                    {% include "_help_tip.html" %}
+                {% endwith %}
+            </h2>
             <p class="text-text-secondary text-sm mt-1">
                 Specific colour+size combinations to always track, even outside your saved filters.
             </p>

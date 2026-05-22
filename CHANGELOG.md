@@ -17,6 +17,7 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 - **Filter form replaced with toggle chips.** Gender, sizes (clothing / pants / shoes), and availability are now multi-select chip groups. Discount has quick-pick chips (30 / 50 / 70%). The "Enabled" checkbox is gone — a filter is active when it has at least one gender AND at least one size selected; the matcher derives this on save. Use a forever-snooze to temporarily disable a fully-configured filter.
 
 - **`/settings` rewritten in Tailwind, hosts the Apprise URL editor.** The v2.0 page was 1,308 lines of inline HTML with no Tailwind tokens; it was the only screen the user couldn't theme or extend. v2.1 replaces it with section cards for Notifications (Apprise URL CRUD + per-URL Test button), Schedule, Country/Language, Watched variants, and Ignored products/keywords. Every section is HTMX-driven — adds and removes update only the affected list without a full page reload.
+- **Contextual help tooltips.** A new `?` icon next to every form section opens a CSS-only popover with a one-sentence explainer and a "Learn more" link to the relevant `/help/*` page. Sprinkled across the filter editor, settings sections, and the first-run empty state. Works on touch via `:focus-within`.
 
 ### Removed
 

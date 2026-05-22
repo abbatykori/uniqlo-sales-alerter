@@ -84,7 +84,12 @@
 
     {# Section 2 — Gender #}
     <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-3">
-        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">2. Gender</legend>
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">
+            2. Gender
+            {% with text="A product must be tagged with at least one of the genders you select. UNISEX matches always." %}
+                {% include "_help_tip.html" %}
+            {% endwith %}
+        </legend>
         <p class="text-text-muted text-xs">Pick one or more. The filter matches products in any of these.</p>
         <div class="flex flex-wrap gap-2">
             {{ chip("gender", "men",     "Men",     "men"     in selected_gender) }}
@@ -97,7 +102,12 @@
 
     {# Section 3 — Sizes #}
     <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-4">
-        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">3. Sizes</legend>
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">
+            3. Sizes
+            {% with text="A deal matches if at least one in-stock size is in your selection. Mix categories freely — clothing + shoes works.", learn_more="/help/reference" %}
+                {% include "_help_tip.html" %}
+            {% endwith %}
+        </legend>
         <p class="text-text-muted text-xs">Pick every size you want to be notified about — you can mix categories.</p>
 
         <div>
@@ -144,7 +154,12 @@
 
     {# Section 4 — Minimum discount #}
     <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-3">
-        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">4. Minimum discount</legend>
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">
+            4. Minimum discount
+            {% with text="Deals below this discount % are skipped. The check itself runs but you won't be paged." %}
+                {% include "_help_tip.html" %}
+            {% endwith %}
+        </legend>
         <p class="text-text-muted text-xs">Only notify when the discount is at least this much.</p>
         <label class="block">
             <input class="w-32 rounded border border-border-default px-3 py-2 text-sm focus:border-border-strong focus:outline-none"
@@ -165,7 +180,12 @@
 
     {# Section 5 — Availability #}
     <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-3">
-        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">5. Availability</legend>
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">
+            5. Availability
+            {% with text="The Uniqlo API flags items as in-store-only when they're not shippable. \"Both\" is the safe default." %}
+                {% include "_help_tip.html" %}
+            {% endwith %}
+        </legend>
         <p class="text-text-muted text-xs">In-store items aren't shippable. Useful if you regularly visit a Uniqlo.</p>
         <div class="flex flex-wrap gap-2">
             {{ radio_chip("availability_mode", "both",     "Online + in-store", selected_availability == "both") }}
@@ -176,7 +196,12 @@
 
     {# Section 6 — Ignored keywords #}
     <fieldset class="rounded-card bg-raised border border-border-default p-5 space-y-3">
-        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">6. Ignored keywords</legend>
+        <legend class="text-sm font-medium px-2 -ml-2 text-text-secondary">
+            6. Ignored keywords
+            {% with text="Per-filter keyword skip-list. Different from the global ignored-keywords list in /settings." %}
+                {% include "_help_tip.html" %}
+            {% endwith %}
+        </legend>
         <p class="text-text-muted text-xs">Skip products whose name contains any of these words. Case-insensitive. Comma-separated.</p>
         <input class="w-full rounded border border-border-default px-3 py-2 focus:border-border-strong focus:outline-none"
                name="ignored_keywords" type="text"

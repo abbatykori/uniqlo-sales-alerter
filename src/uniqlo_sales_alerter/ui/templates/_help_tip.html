@@ -1,0 +1,27 @@
+{# Contextual help tooltip — pure-CSS popover triggered on hover/focus.
+
+   Usage:
+     {% with text="…short explanation…", learn_more="/help/explanation" %}
+         {% include "_help_tip.html" %}
+     {% endwith %}
+
+   ``text`` is required; ``learn_more`` is optional (renders a link to the
+   relevant /help/* section).
+#}
+<span class="relative inline-block ml-1 align-middle group">
+    <button type="button" tabindex="0"
+            aria-label="Help"
+            class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-sunken text-text-muted text-[10px] font-bold hover:bg-accent-muted focus:outline-none focus:ring-2 focus:ring-accent">
+        ?
+    </button>
+    <span class="invisible group-hover:visible group-focus-within:visible
+                 absolute left-1/2 -translate-x-1/2 mt-1 z-20
+                 w-64 rounded-card bg-raised border border-border-default shadow-lg
+                 px-3 py-2 text-xs text-text-primary font-normal text-left normal-case"
+          role="tooltip">
+        {{ text }}
+        {% if learn_more %}
+            <a href="{{ learn_more }}" class="block mt-1 text-accent underline">Learn more</a>
+        {% endif %}
+    </span>
+</span>
