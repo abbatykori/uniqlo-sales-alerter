@@ -4,9 +4,17 @@ from __future__ import annotations
 
 
 def _create_filter(client, name: str = "Tester") -> int:
+    # v2.1 derives ``enabled`` from data presence: a filter needs at least one
+    # gender AND at least one size category to count as active. Pass both so
+    # the status pill renders as "Active" instead of "Disabled".
     resp = client.post(
         "/api/v1/filters",
-        json={"name": name, "gender": ["men"], "min_discount": 40},
+        json={
+            "name": name,
+            "gender": ["men"],
+            "sizes_clothing": ["M"],
+            "min_discount": 40,
+        },
     )
     return resp.json()["id"]
 

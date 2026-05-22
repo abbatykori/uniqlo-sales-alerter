@@ -14,6 +14,11 @@ All notable changes to the [Uniqlo Sales Alerter](https://github.com/kequach/uni
 - **Price layout stacks vertically.** Strikethrough original price sits above the sale price + discount badge, so nothing wraps on narrow screens.
 - **Filter list polished.** Table cells get proper padding, action buttons are styled as buttons (not link text), and a new `Status` column surfaces snooze state as a coloured dot + label (active / snoozed / forever-snoozed / disabled).
 - **Snooze is a modal, not an inline popover.** The v2.0 popover overflowed the table and was unreadable on mobile. v2.1 opens a centered modal dialog with four large duration buttons (1d / 7d / 30d / forever), click-outside-to-dismiss, and auto-closes after picking a duration.
+- **Filter form replaced with toggle chips.** Gender, sizes (clothing / pants / shoes), and availability are now multi-select chip groups. Discount has quick-pick chips (30 / 50 / 70%). The "Enabled" checkbox is gone — a filter is active when it has at least one gender AND at least one size selected; the matcher derives this on save. Use a forever-snooze to temporarily disable a fully-configured filter.
+
+### Behaviour notes
+
+- POSTing to `/api/v1/filters` with `enabled: true` but no gender or sizes now persists `enabled=false`. The service layer derives activity from data presence; the JSON API still accepts the field but it is informational only.
 
 ---
 

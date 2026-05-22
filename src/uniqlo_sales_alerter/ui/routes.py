@@ -48,28 +48,26 @@ def _parse_comma_list(value: str) -> list[str]:
 def _build_payload_from_form(
     *,
     name: str,
-    gender: str,
+    gender: list[str],
     min_discount: float,
-    sizes_clothing: str,
-    sizes_pants: str,
-    sizes_shoes: str,
+    sizes_clothing: list[str],
+    sizes_pants: list[str],
+    sizes_shoes: list[str],
     one_size_match: bool,
     availability_mode: str,
     ignored_keywords: str,
-    enabled: bool,
     snooze_until: str | None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "name": name,
-        "gender": _parse_comma_list(gender),
+        "gender": gender,
         "min_discount": min_discount,
-        "sizes_clothing": _parse_comma_list(sizes_clothing),
-        "sizes_pants": _parse_comma_list(sizes_pants),
-        "sizes_shoes": _parse_comma_list(sizes_shoes),
+        "sizes_clothing": sizes_clothing,
+        "sizes_pants": sizes_pants,
+        "sizes_shoes": sizes_shoes,
         "one_size_match": one_size_match,
         "availability_mode": availability_mode,
         "ignored_keywords": _parse_comma_list(ignored_keywords),
-        "enabled": enabled,
     }
     if snooze_until:
         payload["snooze_until"] = datetime.fromisoformat(snooze_until)
@@ -110,15 +108,14 @@ async def edit_form(
 async def create_view(
     request: Request,
     name: str = Form(...),
-    gender: str = Form(""),
+    gender: list[str] = Form(default_factory=list),
     min_discount: float = Form(0.0),
-    sizes_clothing: str = Form(""),
-    sizes_pants: str = Form(""),
-    sizes_shoes: str = Form(""),
+    sizes_clothing: list[str] = Form(default_factory=list),
+    sizes_pants: list[str] = Form(default_factory=list),
+    sizes_shoes: list[str] = Form(default_factory=list),
     one_size_match: bool = Form(False),
     availability_mode: str = Form("both"),
     ignored_keywords: str = Form(""),
-    enabled: bool = Form(True),
     snooze_until: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
@@ -132,7 +129,6 @@ async def create_view(
         one_size_match=one_size_match,
         availability_mode=availability_mode,
         ignored_keywords=ignored_keywords,
-        enabled=enabled,
         snooze_until=snooze_until,
     )
     try:
@@ -162,15 +158,14 @@ async def update_view(
     request: Request,
     filter_id: int,
     name: str = Form(...),
-    gender: str = Form(""),
+    gender: list[str] = Form(default_factory=list),
     min_discount: float = Form(0.0),
-    sizes_clothing: str = Form(""),
-    sizes_pants: str = Form(""),
-    sizes_shoes: str = Form(""),
+    sizes_clothing: list[str] = Form(default_factory=list),
+    sizes_pants: list[str] = Form(default_factory=list),
+    sizes_shoes: list[str] = Form(default_factory=list),
     one_size_match: bool = Form(False),
     availability_mode: str = Form("both"),
     ignored_keywords: str = Form(""),
-    enabled: bool = Form(True),
     snooze_until: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
 ) -> HTMLResponse:
@@ -184,7 +179,6 @@ async def update_view(
         one_size_match=one_size_match,
         availability_mode=availability_mode,
         ignored_keywords=ignored_keywords,
-        enabled=enabled,
         snooze_until=snooze_until,
     )
     try:

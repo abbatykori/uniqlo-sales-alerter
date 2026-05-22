@@ -34,6 +34,23 @@ def _to_read(row: SavedFilter) -> SavedFilterRead:
     return SavedFilterRead.model_validate(row, from_attributes=True)
 
 
+def _derive_enabled(data: SavedFilterCreate | SavedFilterUpdate) -> bool:
+    """A filter is enabled when it has at least one gender AND at least one size.
+
+    The HTMX form omits the ``enabled`` checkbox entirely — the matcher decides
+    activity from the data shape. The "forever snooze" sentinel remains the
+    intentional path to temporarily disable a fully-configured filter.
+    """
+    has_gender = bool(data.gender)
+    has_size = bool(
+        data.sizes_clothing
+        or data.sizes_pants
+        or data.sizes_shoes
+        or data.one_size_match
+    )
+    return has_gender and has_size
+
+
 async def list_filters(session: AsyncSession) -> list[SavedFilterRead]:
     """Return every saved filter ordered by ``id``."""
     result = await session.execute(select(SavedFilter).order_by(SavedFilter.id))
@@ -62,7 +79,7 @@ async def create_filter(
         one_size_match=int(data.one_size_match),
         availability_mode=data.availability_mode,
         ignored_keywords=data.ignored_keywords,
-        enabled=int(data.enabled),
+        enabled=int(_derive_enabled(data)),
         snooze_until=data.snooze_until,
     )
     session.add(row)
@@ -91,7 +108,7 @@ async def update_filter(
     row.one_size_match = int(data.one_size_match)
     row.availability_mode = data.availability_mode
     row.ignored_keywords = data.ignored_keywords
-    row.enabled = int(data.enabled)
+    row.enabled = int(_derive_enabled(data))
     row.snooze_until = data.snooze_until
     row.updated_at = datetime.now(timezone.utc)
     try:

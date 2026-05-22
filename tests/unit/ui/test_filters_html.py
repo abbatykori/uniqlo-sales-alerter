@@ -106,4 +106,5 @@ def test_edit_form_renders_existing_values(client):
     resp = client.get(f"/filters/{filter_id}/edit")
     assert resp.status_code == 200
     assert 'value="Spouse"' in resp.text
-    assert 'selected' in resp.text  # availability or gender pre-selected
+    # v2.1 uses toggle chips: a checked checkbox marks pre-selected values.
+    assert 'checked' in resp.text
